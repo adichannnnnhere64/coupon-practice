@@ -32,7 +32,13 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureRateLimiting();
 
-    Auth::login(User::find(1));
+        if (app()->isLocal()) {
+            if (User::first() == null) {
+                User::factory()->create();
+            }
+
+            Auth::login(User::find(1));
+        }
     }
 
     /**
