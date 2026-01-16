@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -14,7 +16,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+
+        /* if (app()->isLocal()) { */
+    /* $user = \App\Models\User::first() */
+        /* ?? \App\Models\User::factory()->create(); */
+
+/* } */
+
     }
 
     /**
@@ -23,6 +31,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureRateLimiting();
+
+    Auth::login(User::find(1));
     }
 
     /**

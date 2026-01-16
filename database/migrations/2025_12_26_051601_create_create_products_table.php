@@ -57,7 +57,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('plan_id')->constrained()->onDelete('cascade');
             $table->string('code')->unique();
-            $table->enum('status', ['available', 'reserved', 'sold', 'expired', 'damaged'])->default('available');
+            $table->integer('status')->default(1);
             $table->timestamp('purchased_at')->nullable();
             $table->timestamp('sold_at')->nullable();
             $table->timestamp('expires_at')->nullable();
