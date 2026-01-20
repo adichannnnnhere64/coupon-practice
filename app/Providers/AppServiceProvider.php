@@ -7,6 +7,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -18,10 +19,10 @@ class AppServiceProvider extends ServiceProvider
     {
 
         /* if (app()->isLocal()) { */
-    /* $user = \App\Models\User::first() */
+        /* $user = \App\Models\User::first() */
         /* ?? \App\Models\User::factory()->create(); */
 
-/* } */
+        /* } */
 
     }
 
@@ -33,11 +34,13 @@ class AppServiceProvider extends ServiceProvider
         $this->configureRateLimiting();
 
         if (app()->isLocal()) {
-            if (User::first() == null) {
-                User::factory()->create();
+            try {
+                if (Schema::hasTable('users') && ! User::query()->exists()) {
+                    $user = User::factory()->create();
+                    Auth::login($user);
+                }
+            } catch (\Throwable $e) {
             }
-
-            Auth::login(User::find(1));
         }
     }
 

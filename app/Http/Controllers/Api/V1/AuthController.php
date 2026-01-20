@@ -41,6 +41,7 @@ class AuthController extends ApiController
 
         return $this->success([
             'user' => new UserResource($user),
+            'wallet_balance' => 500,
             'token' => $token,
         ], 'Login successful');
     }
