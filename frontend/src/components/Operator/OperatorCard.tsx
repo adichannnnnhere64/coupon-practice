@@ -3,7 +3,6 @@ import React from 'react';
 import { Link } from '@tanstack/react-router';
 import { OptimizedImage } from '../Image/Image';
 import type { Operator } from '../../lib/api-client';
-// import type { Operator } from '@/lib/api-client';
 
 interface OperatorCardProps {
   operator: Operator;
@@ -61,7 +60,7 @@ export const OperatorCard: React.FC<OperatorCardProps> = ({ operator }) => {
             <p className="font-semibold text-lg text-primary">
               {totalPlans} plans available
             </p>
-            <p className="text-xs">{operator.country.name}</p>
+            <p className="text-xs">{operator?.country?.name}</p>
           </div>
         </div>
 

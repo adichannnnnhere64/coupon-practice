@@ -32,16 +32,6 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureRateLimiting();
-
-        if (app()->isLocal()) {
-            try {
-                if (Schema::hasTable('users') && ! User::query()->exists()) {
-                    $user = User::factory()->create();
-                    Auth::login($user);
-                }
-            } catch (\Throwable $e) {
-            }
-        }
     }
 
     /**

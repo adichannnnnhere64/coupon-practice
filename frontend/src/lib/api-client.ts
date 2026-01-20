@@ -117,9 +117,9 @@ class ApiClient {
 
   private getBaseUrl(): string {
     if (this.isTauri) {
-      return 'https://coupon-finalz.ddev.site/dashboard/api';
+      return 'https://coupon-finalz.ddev.site/api/v1';
     }
-    return 'https://coupon-finalz.ddev.site/dashboard/api';
+    return 'https://coupon-finalz.ddev.site/api/v1';
   }
 
   private setupInterceptors() {
@@ -263,8 +263,9 @@ export async function fetchOperatorsByCountry(
 ): Promise<PaginatedResponse<Operator>> {
   try {
     const response = await apiClient.get<PaginatedResponse<Operator>>(
-      `/operators/country/${countryId}`
+      `/plan-types`
     );
+        console.log(response);
     return response;
   } catch (error) {
     console.error(`fetchOperatorsByCountry error for ID ${countryId}:`, error);
@@ -293,7 +294,7 @@ export async function fetchPopularOperators(
 ): Promise<PaginatedResponse<Operator>> {
   try {
     const response = await apiClient.get<PaginatedResponse<Operator>>(
-      `/operators/popular?limit=${limit}`
+      `/plan-types?limit=${limit}`
     );
     return response;
   } catch (error) {

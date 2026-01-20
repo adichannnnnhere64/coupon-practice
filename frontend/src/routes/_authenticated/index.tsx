@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import useEmblaCarousel from 'embla-carousel-react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ProductList from '../../components/Product/ProductList';
+import { OperatorList } from '../../components/Operator/OperatorList';
 
 export const Route = createFileRoute('/_authenticated/')({
   component: Home,
@@ -74,7 +75,7 @@ function Home() {
           {/* Featured Products Section */}
           <div className="mb-8">
             <h2 className="text-3xl font-bold text-center mb-10">Rigodon</h2>
-            <ProductList />
+            <OperatorList countryId={null}/>
           </div>
         </QueryClientProvider>
         {/* Optional: Additional Sections */}

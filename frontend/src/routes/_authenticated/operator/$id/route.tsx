@@ -21,26 +21,26 @@ export const Route = createFileRoute('/_authenticated/operator/$id')({
           {/* Operator Header */}
           <div className="text-center">
             <img
-              src={operator.logo || '/placeholder.svg'}
-              alt={operator.name}
+              src={operator?.logo || '/placeholder.svg'}
+              alt={operator?.name}
               className="w-32 h-32 mx-auto mb-6 rounded-full shadow-2xl"
             />
             <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              {operator.name}
+              {operator?.name}
             </h1>
             <p className="text-xl text-base-content/70 mt-4">
-              {operator.country.name} • {operator.code}
+              {operator?.country.name} • {operator?.code}
             </p>
           </div>
 
           {/* Plan Types Grid */}
-          {operator.plan_types && operator.plan_types.length > 0 ? (
+          {operator?.plan_types && operator?.plan_types.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-8">
               {operator.plan_types.map((planType) => (
                 <PlanTypeCard
                   key={planType.id}
                   planType={planType}
-                  operatorId={operator.id}
+                  // operatorId={operator.id}
                 />
               ))}
             </div>

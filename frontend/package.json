@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "tsc && vite",
+    "build": "tsc && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "build:laravel": "npm run build && rm -rf ../public/build && mkdir -p ../public/build && cp -r dist/* ../public/build/",

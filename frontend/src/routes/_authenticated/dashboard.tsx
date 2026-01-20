@@ -1,6 +1,7 @@
 // src/routes/dashboard.tsx
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { OperatorList } from '../../components/Operator/OperatorList';
 
 export const Route = createFileRoute('/_authenticated/dashboard')({
   beforeLoad: () => {
@@ -21,6 +22,8 @@ export const Route = createFileRoute('/_authenticated/dashboard')({
         <div className="card bg-base-200 p-6">
           <h2 className="text-xl">Welcome back!</h2>
           <p>You are now in the protected zone.</p>
+
+            <OperatorList countryId={null}/>
         </div>
       </div>
     </div>

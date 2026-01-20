@@ -18,13 +18,19 @@ const ProductList: React.FC<ProductListProps> = ({ initialPage = 1, initialFilte
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [searchQuery, setSearchQuery] = useState('');
 
-    const params = useParams({
-    from: '/_authenticated/operator/$id/plan/$planTypeId',
-  });
-  // const search = useSearch({ from: '/_authenticated/operator/$id/plan/$planTypeId' });
 
-    const urlOperatorId = params.id ? Number(params.id) : undefined;
-  const urlPlanTypeId = params.planTypeId ? Number(params.planTypeId) : undefined;
+    interface RouteParams {
+      id: string;
+      planTypeId: string;
+   }
+
+    // In ProductList.tsx - temporary fix
+const params = useParams({
+  from: '/operator/$id/plan/$planTypeId' as any,
+});
+
+const urlOperatorId = (params as any)?.id ? Number((params as any).id) : undefined;
+const urlPlanTypeId = (params as any)?.planTypeId ? Number((params as any).planTypeId) : undefined;
 
     const filters = {
     operator_id: urlOperatorId ?? initialFilters?.operator_id,
