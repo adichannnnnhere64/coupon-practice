@@ -5,7 +5,7 @@ import { PlanType } from '../../lib/api-client';
 
 interface PlanTypeCardProps {
   planType: PlanType;
-  // operatorId might not be needed as a prop if it's in route context
+  operatorId: Number
 }
 
 const icons: Record<string, string> = {
@@ -17,17 +17,21 @@ const icons: Record<string, string> = {
   validity: 'Validity',
 };
 
-export const PlanTypeCard: React.FC<PlanTypeCardProps> = ({ planType }) => {
+export const PlanTypeCard: React.FC<PlanTypeCardProps> = ({ planType, operatorId }) => {
   const count = planType.available_coupons_count || 0;
   const icon = icons[planType.name.toLowerCase()] || 'Target';
+
+    console.log('adi')
+    console.log(operatorId)
 
   // The Link component automatically inherits parent route params
   // So if you're in /operator/123, the operator ID is already known
   return (
     <Link
-      to="/operator/$id/plan/$id"
+      to="/operator/$operatorId/plan/$id"
       params={{
-        id: planType.id.toString(), // This is the planType ID (the second $id)
+        operatorId: operatorId,
+        id: planType.id.toString(),
       }}
       // The operator ID (first $id) comes from the current route context
       preload="intent"

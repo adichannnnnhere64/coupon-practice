@@ -23,7 +23,6 @@ export const Route = createFileRoute('/_authenticated/dashboard')({
           <h2 className="text-xl">Welcome back!</h2>
           <p>You are now in the protected zone.</p>
 
-            <OperatorList countryId={null}/>
         </div>
       </div>
     </div>

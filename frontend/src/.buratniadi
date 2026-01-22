@@ -1,0 +1,5 @@
+stores/**/*
+routes/**/*
+lib/**/*
+layouts/**/*
+components/**/*

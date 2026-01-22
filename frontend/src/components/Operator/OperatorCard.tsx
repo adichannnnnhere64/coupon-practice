@@ -1,7 +1,8 @@
-// src/components/Operator/OperatorCard.tsx
+// src/components/Operator/OperatorCard.tsx - Optimized version
 import React from 'react';
 import { Link } from '@tanstack/react-router';
 import { OptimizedImage } from '../Image/Image';
+import { Wifi, Phone, Check } from 'lucide-react';
 import type { Operator } from '../../lib/api-client';
 
 interface OperatorCardProps {
@@ -9,63 +10,81 @@ interface OperatorCardProps {
 }
 
 export const OperatorCard: React.FC<OperatorCardProps> = ({ operator }) => {
-  const hasData = operator.has_data_plans;
-  const hasTalktime = operator.has_talktime;
-  const totalPlans = operator.plan_types?.reduce((sum, pt) => sum + (pt.available_coupons_count || 0), 0) || 0;
+  const planCount = operator.plan_types?.length || 0;
 
   return (
     <Link
       to="/operator/$id"
       params={{ id: operator.id.toString() }}
-      className="group relative block"
+      className="group block"
       preload="intent"
     >
-      <div className="relative overflow-hidden rounded-3xl bg-base-200/50 backdrop-blur-sm border border-base-300/30 shadow-lg hover:shadow-2xl transition-all duration-500 hover:scale-[1.02] hover:-translate-y-2">
-        {/* Gradient Top Bar */}
-        <div className="h-2 bg-gradient-to-r from-primary via-secondary to-accent" />
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:border-indigo-300 hover:shadow-lg transition-all duration-300 active:scale-[0.98]">
+        {/* Logo Container */}
+        <div className="relative aspect-square bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div className="relative w-full h-full">
+              {/* Background Glow */}
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-xl blur-xl group-hover:blur-2xl transition-all" />
 
-        {/* Main Card */}
-        <div className="p-8 text-center space-y-6">
-          {/* Logo */}
-          <div className="relative mx-auto w-32 h-32">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full blur-xl scale-110 group-hover:scale-125 transition-transform duration-700" />
-            <div className="relative z-10 w-full h-full rounded-full overflow-hidden ring-4 ring-white/50 shadow-2xl">
-              <OptimizedImage
-                src={operator.logo || '/placeholder-operator.svg'}
-                alt={operator.name}
-                className="w-full h-full object-contain p-6 bg-white"
-                loading="lazy"
-              />
+              {/* Logo */}
+              <div className="relative w-full h-full flex items-center justify-center">
+                <OptimizedImage
+                  src={operator.logo}
+                  alt={operator.name}
+                  className="w-4/5 h-4/5 object-contain drop-shadow-lg"
+                  loading="lazy"
+                />
+              </div>
             </div>
           </div>
 
-          {/* Name */}
-          <h3 className="text-2xl font-bold tracking-tight">{operator.name}</h3>
-
-          {/* Badges */}
-          <div className="flex flex-wrap gap-2 justify-center">
-            {hasData && (
-              <span className="badge badge-lg badge-primary shadow-md">Data Plans</span>
-            )}
-            {hasTalktime && (
-              <span className="badge badge-lg badge-success shadow-md">Talktime</span>
-            )}
-            {totalPlans > 20 && (
-              <span className="badge badge-lg badge-accent shadow-md">Hot</span>
-            )}
-          </div>
-
-          {/* Stats */}
-          <div className="text-sm text-base-content/60 space-y-1">
-            <p className="font-semibold text-lg text-primary">
-              {totalPlans} plans available
-            </p>
-            <p className="text-xs">{operator?.country?.name}</p>
-          </div>
+          {/* Badge */}
+          {planCount > 0 && (
+            <div className="absolute top-3 right-3 bg-indigo-600 text-white text-xs font-bold px-2 py-1 rounded-full">
+              {planCount}
+            </div>
+          )}
         </div>
 
-        {/* Hover Shine */}
-        <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+        {/* Content */}
+        <div className="p-4">
+          {/* Name */}
+          <h3 className="font-bold text-gray-900 mb-2 truncate">
+            {operator.name}
+          </h3>
+
+          {/* Country */}
+          {operator.country && (
+            <p className="text-sm text-gray-600 mb-3">
+              {operator.country.name}
+            </p>
+          )}
+
+          {/* Features */}
+          <div className="flex items-center gap-3">
+            {operator.has_data_plans && (
+              <div className="flex items-center gap-1">
+                <Wifi className="w-4 h-4 text-green-600" />
+                <span className="text-xs text-gray-600">Data</span>
+              </div>
+            )}
+            {operator.has_talktime && (
+              <div className="flex items-center gap-1">
+                <Phone className="w-4 h-4 text-blue-600" />
+                <span className="text-xs text-gray-600">Talktime</span>
+              </div>
+            )}
+          </div>
+
+          {/* CTA */}
+          <div className="mt-4 flex items-center justify-between">
+            <span className="text-sm font-medium text-indigo-600 group-hover:text-indigo-700 transition-colors">
+              View plans
+            </span>
+            <Check className="w-4 h-4 text-green-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+        </div>
       </div>
     </Link>
   );

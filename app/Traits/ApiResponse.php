@@ -3,21 +3,29 @@
 namespace App\Traits;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Symfony\Component\HttpFoundation\Response;
 
 trait ApiResponse
 {
+
+
     protected function success(
-        mixed $data = null,
-        string $message = 'Success',
-        int $code = Response::HTTP_OK
-    ): JsonResponse {
-        return response()->json([
-            'success' => true,
-            'message' => $message,
-            'data' => $data,
-        ], $code);
+    mixed $data = [],
+    string $message = 'Success',
+    int $code = Response::HTTP_OK
+): JsonResponse {
+
+    if ($data instanceof \Illuminate\Http\Resources\Json\JsonResource) {
+        $data = $data->resolve();
     }
+
+    return response()->json([
+        'success' => true,
+        'message' => $message,
+        'data' => $data,
+    ], $code);
+}
 
     protected function created(
         mixed $data = null,

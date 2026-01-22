@@ -51,24 +51,58 @@ export interface Operator {
   name: string;
   code: string;
   logo: string | null;
-  country: {
-    id: number;
-    name: string;
-    code: string;
-  };
   has_data_plans: boolean;
   has_talktime: boolean;
-  plan_types?: PlanType[]; // ← optional + array
+  plan_types?: Plan[]; // ← optional + array
 }
 
 
-export interface PlanType {
+export interface PlanAttribute {
+  id: number;
+  name: string;
+  value: string | number | boolean;
+}
+
+export interface Media {
+  id: number;
+  url: string;
+  thumb_url: string;
+  name: string;
+  size: number;
+  mime_type: string;
+}
+
+export interface PlanTypeResource {
   id: number;
   name: string;
   description: string | null;
   icon: string | null;
   available_coupons_count: number;
 }
+
+export interface StockSummary {
+  total: number;
+  available: number;
+}
+
+export interface Plan {
+  id: number;
+  plan_type_id: number;
+  name: string;
+  description: string | null;
+  base_price: number;
+  actual_price: number;
+  is_active: boolean;
+  discount_percentage?: number;
+  attributes: PlanAttribute[];
+  plan_type?: PlanTypeResource;
+  media?: Media[];
+  stock_summary?: StockSummary;
+  meta_data?: any;
+  created_at?: string;
+  updated_at?: string;
+}
+
 
 export interface PaginationLink {
   url: string | null;
@@ -239,20 +273,16 @@ export function getCouponImage(coupon: Coupon | null | undefined): string {
 }
 
 // ✅ Fetch single coupon
-export async function fetchCouponById(id: number): Promise<Coupon | null> {
+export async function fetchPlanById(id: number): Promise<Coupon | null> {
   try {
-    console.log(`🔍 Fetching coupon ${id}...`);
-    const response = await apiClient.get<{ data: Coupon }>(`/coupons/${id}`);
+    const response = await apiClient.get<{ data: Coupon }>(`/plans/${id}`);
     const coupon = response.data; // ✅ Extract .data like fetchCoupons
-    console.log('✅ Coupon fetched:', coupon.coupon_code);
-    console.log('✅ Images count:', coupon.images?.length || 0);
     return coupon;
   } catch (error: any) {
     if (error.response?.status === 404) {
       console.warn(`Coupon ${id} not found`);
       return null;
     }
-    console.error('fetchCouponById error:', error);
     return null;
   }
 }
@@ -276,9 +306,10 @@ export async function fetchOperatorsByCountry(
 // ✅ NEW: Fetch single operator with plan types
 export async function fetchOperatorById(id: number): Promise<Operator | null> {
   try {
-    const response = await apiClient.get<{ data: Operator }>(`/operators/${id}`);
+    const response = await apiClient.get<{ data: Operator }>(`/plan-types/${id}`);
     return response.data;
   } catch (error: any) {
+
     if (error.response?.status === 404) {
       console.warn(`Operator ${id} not found`);
       return null;

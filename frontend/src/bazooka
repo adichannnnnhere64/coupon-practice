@@ -1,0 +1,3712 @@
+stores/useAuthStore.ts
+// src/stores/useAuthStore.ts
+import axios from 'axios';
+import { create } from 'zustand';
+
+const api = axios.create({
+  baseURL: 'https://coupon-finalz.ddev.site/api/v1', // ✅ API-only base URL
+});
+
+interface AuthState {
+  user: any | null;
+  token: string | null;
+  isAuthenticated: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (data: {
+    name: string;
+    email: string;
+    password: string;
+    password_confirmation: string;
+    phone?: string;
+  }) => Promise<void>;
+  logout: () => Promise<void>;
+  checkAuth: () => Promise<void>;
+}
+
+export const useAuthStore = create<AuthState>(set => ({
+  user: null,
+  token: localStorage.getItem('auth_token'),
+  isAuthenticated: false,
+
+  login: async (email: string, password: string) => {
+    try {
+      const response = await api.post('/login', { email, password });
+            const { user, token } = response.data;
+
+      // ✅ Store token
+      localStorage.setItem('auth_token', token);
+
+      // ✅ Set Authorization header for all future requests
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      set({
+        user,
+        token,
+        isAuthenticated: true,
+      });
+    } catch (error: any) {
+      if (error.response?.status === 422) {
+        const message = error.response.data.message || 'Invalid credentials';
+        throw new Error(message);
+      }
+      throw new Error('Login failed. Please try again.');
+    }
+  },
+
+  logout: async () => {
+    try {
+      await api.post('/logout');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // ✅ Clean up
+      localStorage.removeItem('auth_token');
+      delete api.defaults.headers.common['Authorization'];
+
+      set({
+        user: null,
+        token: null,
+        isAuthenticated: false,
+      });
+    }
+  },
+
+    register: async (data) => {
+    await api.post('/register', data);
+    // Your backend returns user + no token (since not logged in yet)
+    // So we just let user go to login, or auto-login if you want
+    // Option 1: Auto-login after register (recommended)
+    // Option 2: Redirect to login (current behavior)
+
+    // If you want auto-login after register, modify your Laravel register() to also log them in:
+    // $token = $user->createToken('spa-token')->plainTextToken;
+    // return response()->json(['user' => ..., 'token' => $token], 201);
+
+    // Then here:
+    // localStorage.setItem('auth_token', response.token);
+    // set({ user: response.user, token: response.token });
+  },
+
+  checkAuth: async () => {
+    const token = localStorage.getItem('auth_token');
+
+    if (!token) {
+      set({ isAuthenticated: false, user: null });
+      return;
+    }
+
+    try {
+      // ✅ Set token for this request
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      const response = await api.get('/me');
+
+      set({
+        user: response.data,
+        isAuthenticated: true,
+      });
+    } catch (error) {
+      // ✅ Token invalid/expired
+      localStorage.removeItem('auth_token');
+      delete api.defaults.headers.common['Authorization'];
+      set({ user: null, token: null, isAuthenticated: false });
+    }
+  },
+}));
+
+// ✅ Initialize on app start
+useAuthStore.getState().checkAuth();
+
+
+stores/useCouponStore.ts
+// src/stores/useCouponStore.ts
+import { create } from 'zustand';
+import { api } from '../lib/api-client';
+
+export interface CouponTransaction {
+  id: number;
+  amount: number;
+  status: string;
+  coupon_code: string;
+  operator: string;
+  denomination: string;
+  purchased_at: string;
+  delivered_at?: string;
+}
+
+interface CouponState {
+  isPurchasing: boolean;
+  purchaseCoupon: (
+    couponId: number,
+    paymentMethod: 'wallet' | 'stripe' | 'paypal'
+  ) => Promise<CouponTransaction>;
+}
+
+interface LaravelValidationErrors {
+  [key: string]: string[];
+}
+
+export const useCouponStore = create<CouponState>(set => ({
+  isPurchasing: false,
+
+  purchaseCoupon: async (couponId: number, paymentMethod: string) => {
+    set({ isPurchasing: true });
+    try {
+      const response = await api.post('/coupons/purchase', {
+        coupon_id: couponId,
+        payment_method: paymentMethod,
+      });
+      return response.data as CouponTransaction;
+    } catch (error: any) {
+      console.error('Purchase failed:', error);
+
+      // Extract error message from Laravel validation
+      if (error.response?.status === 422) {
+        const errors = error.response.data.errors as
+          | LaravelValidationErrors
+          | undefined;
+        if (errors && Object.keys(errors).length > 0) {
+          const firstError = Object.values(errors)[0][0];
+          throw new Error(firstError);
+        }
+        throw new Error('Validation failed');
+      }
+
+      throw new Error(error.response?.data?.message || 'Purchase failed');
+    } finally {
+      set({ isPurchasing: false });
+    }
+  },
+}));
+
+
+routes/__root.tsx
+import * as React from 'react';
+import {
+  Outlet,
+  ScrollRestoration,
+  createRootRouteWithContext,
+} from '@tanstack/react-router';
+import '../App.css';
+import { useAuthStore } from '../stores/useAuthStore';
+
+interface RouterContext {
+  auth: ReturnType<typeof useAuthStore>;
+}
+
+export const Route = createRootRouteWithContext<RouterContext>()({
+  component: RootComponent,
+});
+
+function RootComponent() {
+  return (
+    <React.Fragment>
+      <ScrollRestoration />
+      <Outlet />
+    </React.Fragment>
+  );
+}
+
+
+routes/_authenticated.tsx
+import { createFileRoute, Outlet, redirect } from '@tanstack/react-router';
+import { createContext, useContext } from 'react';
+import MobileLayout from '../layouts/AppLayout';
+import { useAuthStore } from '../stores/useAuthStore';
+
+interface AuthContextType {
+  user: any;
+  logout: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within AuthenticatedProvider');
+  }
+  return context;
+};
+
+export const Route = createFileRoute('/_authenticated')({
+  beforeLoad: () => {
+    if (!useAuthStore.getState().isAuthenticated) {
+      throw redirect({ to: '/login' });
+    }
+  },
+  component: () => {
+    const { user, logout } = useAuthStore();
+
+    return (
+      <MobileLayout>
+        <AuthContext.Provider value={{ user: user!, logout }}>
+          <Outlet />
+        </AuthContext.Provider>
+      </MobileLayout>
+    );
+  },
+});
+
+export function AuthenticatedProvider({
+  children,
+  user,
+  logout,
+}: {
+  children: React.ReactNode;
+  user: any;
+  logout: () => Promise<void>;
+}) {
+  return (
+    <AuthContext.Provider value={{ user, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+
+routes/_authenticated/checkout/index.tsx
+import {
+  createFileRoute,
+  useNavigate,
+  useSearch,
+} from '@tanstack/react-router';
+import { useEffect, useState } from 'react';
+import { useCouponStore } from '../../../stores/useCouponStore';
+import { useAuthStore } from '../../../stores/useAuthStore';
+import { fetchOperatorById, fetchPlanById } from '../../../lib/api-client';
+
+// Types matching your PlanResource
+export interface PlanAttribute {
+  id: number;
+  name: string;
+  value: string | number | boolean;
+}
+
+export interface Media {
+  id: number;
+  url: string;
+  thumb_url: string;
+  name: string;
+  size: number;
+  mime_type: string;
+}
+
+export interface PlanTypeResource {
+  id: number;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  available_coupons_count: number;
+}
+
+export interface StockSummary {
+  total: number;
+  available: number;
+}
+
+export interface Plan {
+  id: number;
+  plan_type_id: number;
+  name: string;
+  description: string | null;
+  base_price: number;
+  actual_price: number;
+  is_active: boolean;
+  discount_percentage?: number;
+  attributes: PlanAttribute[];
+  plan_type?: PlanTypeResource;
+  media?: Media[];
+  stock_summary?: StockSummary;
+  meta_data?: any;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const Route = createFileRoute('/_authenticated/checkout/')({
+  component: CheckoutPage,
+});
+
+function CheckoutPage() {
+  // Get search params
+  const search = useSearch({
+    from: '/_authenticated/checkout/',
+  });
+
+  const { planId, operatorId, amount, planName, planData, planSpeed } = search;
+  const navigate = useNavigate();
+  const [plan, setPlan] = useState<Plan | null>(null);
+  const [operator, setOperator] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch plan details if planId is provided
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!planId) return;
+
+      setIsLoading(true);
+      setError(null);
+      try {
+        if (operatorId) {
+          const operatorData = await fetchOperatorById(Number(operatorId));
+          setOperator(operatorData);
+        }
+
+        if (planId) {
+          const planData = await fetchPlanById(Number(planId));
+          setPlan(planData);
+        }
+      } catch (error) {
+        console.error('Failed to fetch data:', error);
+        setError('Failed to load plan details. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [planId, operatorId]);
+
+  const handleCheckout = async () => {
+    if (!planId || !amount) return;
+
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      // Simulate payment processing
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // TODO: Implement actual payment processing here
+      // Example: Process payment, create order, etc.
+      console.log('Processing checkout with:', {
+        planId,
+        amount,
+        planName,
+        operatorId,
+        plan,
+      });
+
+      // After successful payment, navigate to confirmation
+      navigate({
+        to: '/success',
+        search: {
+          planName,
+          amount,
+          orderId: `ORD-${Date.now()}`,
+        },
+      });
+
+    } catch (error) {
+      console.error('Checkout failed:', error);
+      setError('Payment processing failed. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const displayAmount = amount || plan?.actual_price;
+  const canCheckout = planId && displayAmount && !isLoading && !isProcessing;
+  const finalAmount = displayAmount ? parseFloat(displayAmount.toString()).toFixed(2) : '0.00';
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="max-w-4xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
+        {/* Progress Steps */}
+        <div className="mb-12">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center">
+                1
+              </div>
+              <span className="text-sm font-medium text-gray-500">Cart</span>
+            </div>
+            <div className="flex-1 h-1 bg-gray-300 mx-4"></div>
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center">
+                2
+              </div>
+              <span className="text-sm font-medium text-gray-800">Checkout</span>
+            </div>
+            <div className="flex-1 h-1 bg-gray-300 mx-4"></div>
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center">
+                3
+              </div>
+              <span className="text-sm font-medium text-gray-500">Confirmation</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Checkout Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            Checkout
+          </h1>
+          <p className="mt-4 text-lg text-gray-600">Complete your purchase</p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-8">
+          {/* Order Summary */}
+          <div className="md:col-span-2">
+            <div className="bg-white rounded-2xl shadow-xl p-6 mb-6 border border-gray-100">
+              <h2 className="text-2xl font-bold text-gray-800 mb-6 pb-4 border-b border-gray-100">
+                Order Summary
+              </h2>
+
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-600">{error}</p>
+                </div>
+              )}
+
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+                  <p className="text-gray-500">Loading order details...</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Plan Details */}
+                  <div className="p-5 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-bold text-xl text-gray-800 mb-2">
+                          {plan?.name || planName || 'Plan'}
+                        </h3>
+                        {(planData || planSpeed) && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                            {planData && (
+                              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full">
+                                {planData}
+                              </span>
+                            )}
+                            {planSpeed && (
+                              <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full">
+                                {planSpeed}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {plan?.description && (
+                          <p className="text-gray-600 mt-2">{plan.description}</p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        {plan?.discount_percentage && (
+                          <div className="text-sm text-gray-500 line-through mb-1">
+                            ₱{plan.base_price?.toFixed(2)}
+                          </div>
+                        )}
+                        <div className="text-2xl font-bold text-blue-600">
+                          ₱{finalAmount}
+                        </div>
+                        {plan?.discount_percentage && (
+                          <div className="text-sm text-green-600 font-medium mt-1">
+                            Save {plan.discount_percentage}%
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Operator Info */}
+                  {operator && (
+                    <div className="p-5 bg-gray-50 rounded-xl border border-gray-200">
+                      <h4 className="font-semibold text-gray-700 mb-4">Network Provider</h4>
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-full bg-white p-2 border border-gray-300">
+                          <img
+                            src={operator.logo || 'https://via.placeholder.com/100'}
+                            alt={operator.name}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                        <div>
+                          <p className="font-bold text-lg text-gray-800">{operator.name}</p>
+                          <p className="text-gray-600">Prepaid Mobile Load</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Order Breakdown */}
+                  <div className="border-t border-gray-200 pt-6">
+                    <h4 className="font-semibold text-gray-700 mb-4">Order Breakdown</h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Plan Price</span>
+                        <span className="font-medium">₱{finalAmount}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Service Fee</span>
+                        <span className="font-medium text-green-600">₱0.00</span>
+                      </div>
+                      <div className="flex justify-between items-center text-lg font-bold pt-3 border-t border-gray-200">
+                        <span className="text-gray-800">Total Amount</span>
+                        <span className="text-2xl text-blue-600">₱{finalAmount}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Security Badges */}
+            <div className="flex flex-wrap gap-4 justify-center">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="w-6 h-6 text-green-500">🔒</div>
+                <span>Secure SSL Encryption</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="w-6 h-6 text-blue-500">✓</div>
+                <span>Money-Back Guarantee</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="w-6 h-6 text-purple-500">⭐</div>
+                <span>24/7 Customer Support</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Section */}
+          <div className="md:col-span-1">
+            <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100 sticky top-6">
+              <h3 className="text-xl font-bold text-gray-800 mb-6">Complete Purchase</h3>
+
+              <div className="mb-8">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-gray-600">Total Due</span>
+                  <span className="text-3xl font-bold text-blue-600">₱{finalAmount}</span>
+                </div>
+
+                <div className="text-sm text-gray-500 mb-6">
+                  <p>All prices include applicable taxes.</p>
+                  <p className="mt-1">No hidden fees.</p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleCheckout}
+                disabled={!canCheckout}
+                className={`w-full py-4 px-6 rounded-xl font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]
+                  ${canCheckout
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl'
+                    : 'bg-gray-300 cursor-not-allowed'
+                  }`}
+              >
+                {isProcessing ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-3"></div>
+                    Processing...
+                  </div>
+                ) : (
+                  `Pay ₱${finalAmount}`
+                )}
+              </button>
+
+              <p className="mt-6 text-xs text-gray-500 text-center">
+                By completing your purchase, you agree to our{' '}
+                <a href="#" className="text-blue-600 hover:underline">Terms of Service</a>
+                {' '}and{' '}
+                <a href="#" className="text-blue-600 hover:underline">Privacy Policy</a>
+              </p>
+
+              {/* Test Card Info */}
+              <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm font-medium text-yellow-800 mb-2">💳 Test Payment</p>
+                <p className="text-xs text-yellow-600">
+                  Use card <code className="bg-yellow-100 px-2 py-1 rounded">4242 4242 4242 4242</code>
+                  with any future date and CVC
+                </p>
+              </div>
+
+              {/* Need Help */}
+              <div className="mt-8 text-center">
+                <p className="text-gray-600 mb-2">Need help with your purchase?</p>
+                <a
+                  href="mailto:support@example.com"
+                  className="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center gap-1"
+                >
+                  <span>Contact Support</span>
+                  <span>→</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Back Link */}
+        <div className="mt-12 text-center">
+          <button
+            onClick={() => navigate({ to: -1 })}
+            className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            <span>←</span>
+            <span>Return to Plan Selection</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+routes/_authenticated/dashboard.tsx
+// src/routes/dashboard.tsx
+import { createFileRoute, redirect } from '@tanstack/react-router';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { OperatorList } from '../../components/Operator/OperatorList';
+
+export const Route = createFileRoute('/_authenticated/dashboard')({
+  beforeLoad: () => {
+    const { isAuthenticated } = useAuthStore.getState();
+    console.log(isAuthenticated);
+    if (!isAuthenticated) {
+      throw redirect({
+        to: '/login',
+        search: { redirect: '/dashboard' },
+      });
+    }
+  },
+
+  component: () => (
+    <div className="p-6">
+      <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
+      <div className="grid gap-4">
+        <div className="card bg-base-200 p-6">
+          <h2 className="text-xl">Welcome back!</h2>
+          <p>You are now in the protected zone.</p>
+
+        </div>
+      </div>
+    </div>
+  ),
+});
+
+
+routes/_authenticated/index.tsx
+import { createFileRoute } from '@tanstack/react-router';
+import useEmblaCarousel from 'embla-carousel-react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import ProductList from '../../components/Product/ProductList';
+import { OperatorList } from '../../components/Operator/OperatorList';
+
+export const Route = createFileRoute('/_authenticated/')({
+  component: Home,
+});
+
+function Home() {
+  const [emblaRef] = useEmblaCarousel({
+    loop: true,
+    align: 'start',
+    dragFree: false, // important
+    containScroll: 'trimSnaps', // prevents weird jumps
+  });
+
+  const queryClient = new QueryClient();
+
+  return (
+    <div className="min-h-screen bg-base-200">
+      {' '}
+      {/* Same background as product page */}
+      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        {' '}
+        {/* Centered content like product page */}
+        {/* Hero Carousel */}
+        <div className="mb-12">
+          <div
+            className="embla overflow-hidden rounded-2xl shadow-2xl"
+            ref={emblaRef}
+          >
+            <div className="embla__container flex">
+              {/* Slide 1 */}
+              <div className="embla__slide flex-[0_0_100%] min-w-0">
+                <div className="relative">
+                  <img
+                    src="../b3.jpg"
+                    alt="Latest Phones"
+                    className="w-full h-64 sm:h-80 md:h-96 lg:h-[500px] object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                  <div className="absolute bottom-8 left-8 text-white"></div>
+                </div>
+              </div>
+
+              <div className="embla__slide flex-[0_0_100%] min-w-0">
+                <div className="relative">
+                  <img
+                    src="../b2.jpg"
+                    alt="Premium Collection"
+                    className="w-full h-64 sm:h-80 md:h-96 lg:h-[500px] object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                  <div className="absolute bottom-8 left-8 text-white"></div>
+                </div>
+              </div>
+
+              <div className="embla__slide flex-[0_0_100%] min-w-0">
+                <div className="relative">
+                  <img
+                    src="../b1.jpg"
+                    alt="Best Deals"
+                    className="w-full h-64 sm:h-80 md:h-96 lg:h-[500px] object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                  <div className="absolute bottom-8 left-8 text-white"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <QueryClientProvider client={queryClient}>
+          {/* Featured Products Section */}
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold text-center mb-10">Rigodon</h2>
+            <OperatorList countryId={null}/>
+          </div>
+        </QueryClientProvider>
+        {/* Optional: Additional Sections */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
+          <div className="text-center p-8 bg-base-100 rounded-2xl shadow-lg">
+            <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
+              <svg
+                className="w-10 h-10 text-primary"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Free Shipping</h3>
+            <p className="text-base-content/70">On all orders over $500</p>
+          </div>
+
+          <div className="text-center p-8 bg-base-100 rounded-2xl shadow-lg">
+            <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
+              <svg
+                className="w-10 h-10 text-primary"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Secure Payment</h3>
+            <p className="text-base-content/70">100% secure transactions</p>
+          </div>
+
+          <div className="text-center p-8 bg-base-100 rounded-2xl shadow-lg">
+            <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
+              <svg
+                className="w-10 h-10 text-primary"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Easy Returns</h3>
+            <p className="text-base-content/70">30-day return policy</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default Route;
+
+
+routes/_authenticated/operator/$id/plan/$id.tsx
+import { createFileRoute } from '@tanstack/react-router'
+
+export const Route = createFileRoute('/_authenticated/operator/$id/plan/$id')({
+  component: RouteComponent,
+})
+
+function RouteComponent() {
+  return <div>Hello "/_authenticated/operator/$id/plan/$id"!</div>
+}
+
+
+routes/_authenticated/operator/$id/plan/route.tsx
+// src/routes/_authenticated/operator/$id/plan/route.tsx
+import { createFileRoute } from '@tanstack/react-router';
+import { Outlet, useParams } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/_authenticated/operator/$id/plan')({
+  component: () => {
+    const { id } = useParams({ from: '/_authenticated/operator/$id/plan' });
+    return (
+      <div className="min-h-screen bg-base-200">
+        <div className="max-w-7xl mx-auto px-6 py-12">
+          <h2 className="text-2xl font-bold mb-4">Plans for Operator {id}</h2>
+          <Outlet />  {/* ← Renders child $planTypeId.tsx */}
+        </div>
+      </div>
+    );
+  },
+});
+
+
+routes/_authenticated/operator/$id/route.tsx
+// src/routes/_authenticated/operator/$id/route.tsx
+import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router';
+import { useState } from 'react';
+import { fetchOperatorById } from '../../../../lib/api-client';
+
+// Types
+export interface PlanAttribute {
+  id: number;
+  name: string;
+  value: string | number | boolean;
+}
+
+export interface Media {
+  id: number;
+  url: string;
+  thumb_url: string;
+  name: string;
+  size: number;
+  mime_type: string;
+}
+
+export interface PlanTypeResource {
+  id: number;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  available_coupons_count: number;
+}
+
+export interface StockSummary {
+  total: number;
+  available: number;
+}
+
+export interface Plan {
+  id: number;
+  plan_type_id: number;
+  name: string;
+  description: string | null;
+  base_price: number;
+  actual_price: number;
+  is_active: boolean;
+  discount_percentage?: number;
+  attributes: PlanAttribute[];
+  plan_type?: PlanTypeResource;
+  media?: Media[];
+  stock_summary?: StockSummary;
+  meta_data?: any;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const Route = createFileRoute('/_authenticated/operator/$id')({
+  loader: async ({ params }) => {
+    const operator = await fetchOperatorById(Number(params.id));
+    return { operator };
+  },
+
+  component: OperatorPage,
+});
+
+function OperatorPage() {
+  const { operator } = Route.useLoaderData();
+  const navigate = useNavigate();
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+
+  const handlePlanClick = (plan: Plan) => {
+    setSelectedPlan(plan);
+  };
+
+  const handleCheckout = () => {
+    if (selectedPlan) {
+      // Navigate to checkout page with plan data
+      navigate({
+        to: '/checkout',
+        search: {
+          planId: selectedPlan.id,
+          operatorId: operator.id,
+        },
+      });
+    }
+  };
+
+  const handleCloseModal = () => {
+    setSelectedPlan(null);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+      <div className="max-w-7xl mx-auto px-6 py-12 space-y-16">
+        {/* Operator Header */}
+        <div className="text-center">
+          <img
+            src={operator?.logo || 'https://coupon-finalz.ddev.site/placeholder.svg'}
+            alt={operator?.name}
+            className="w-32 h-32 mx-auto mb-6 rounded-full shadow-2xl object-cover border-4 border-white"
+          />
+          <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            {operator?.name}
+          </h1>
+          <p className="mt-4 text-lg text-gray-600">Choose your perfect plan</p>
+        </div>
+
+        {/* Plan Types Grid */}
+        {operator?.plan_types && operator?.plan_types.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {operator.plan_types.map((plan: Plan) => (
+              <div
+                key={plan.id}
+                onClick={() => handlePlanClick(plan)}
+                className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:-translate-y-2 border border-gray-100 overflow-hidden"
+              >
+                {/* Discount Badge */}
+                {plan.discount_percentage && plan.discount_percentage > 0 && (
+                  <div className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-4 py-2 text-sm font-bold">
+                    {plan.discount_percentage}% OFF
+                  </div>
+                )}
+
+                <div className="p-6">
+                  {/* Plan Name */}
+                  <h3 className="text-xl font-bold text-gray-800 mb-2 line-clamp-2">
+                    {plan.name}
+                  </h3>
+
+                  {/* Plan Description */}
+                  {plan.description && (
+                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                      {plan.description}
+                    </p>
+                  )}
+
+                  {/* Pricing */}
+                  <div className="mb-4">
+                    {plan.base_price !== plan.actual_price ? (
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-3xl font-bold text-blue-600">
+                            ₱{plan.actual_price.toFixed(2)}
+                          </span>
+                          <span className="text-lg text-gray-400 line-through">
+                            ₱{plan.base_price.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-3xl font-bold text-blue-600">
+                        ₱{plan.actual_price.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Attributes */}
+                  {plan.attributes && plan.attributes.length > 0 && (
+                    <div className="space-y-2 mb-4">
+                      {plan.attributes.slice(0, 3).map((attr) => (
+                        <div key={attr.id} className="flex items-center text-sm">
+                          <svg className="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-gray-700">{attr.name}: {attr.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Status */}
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                    <span className={`text-sm font-medium ${plan.is_active ? 'text-green-600' : 'text-red-600'}`}>
+                      {plan.is_active ? 'Available' : 'Unavailable'}
+                    </span>
+                    <button className="text-blue-600 font-semibold text-sm hover:text-blue-800 transition-colors">
+                      View Details →
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-20">
+            <p className="text-2xl text-gray-400">No plans available</p>
+          </div>
+        )}
+
+        <Outlet />
+      </div>
+
+      {/* Plan Details Modal */}
+      {selectedPlan && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-800">Plan Details</h2>
+              <button
+                onClick={handleCloseModal}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-6">
+              {/* Discount Badge */}
+              {selectedPlan.discount_percentage && selectedPlan.discount_percentage > 0 && (
+                <div className="inline-block bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-3 rounded-full text-lg font-bold shadow-lg">
+                  🎉 {selectedPlan.discount_percentage}% OFF - Limited Time!
+                </div>
+              )}
+
+              {/* Plan Name & Description */}
+              <div>
+                <h3 className="text-3xl font-bold text-gray-800 mb-3">
+                  {selectedPlan.name}
+                </h3>
+                {selectedPlan.description && (
+                  <p className="text-gray-600 text-lg leading-relaxed">
+                    {selectedPlan.description}
+                  </p>
+                )}
+              </div>
+
+              {/* Pricing Section */}
+              <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6">
+                <div className="flex items-baseline gap-3">
+                  <span className="text-5xl font-bold text-blue-600">
+                    ₱{selectedPlan.actual_price.toFixed(2)}
+                  </span>
+                  {selectedPlan.base_price !== selectedPlan.actual_price && (
+                    <span className="text-2xl text-gray-400 line-through">
+                      ₱{selectedPlan.base_price.toFixed(2)}
+                    </span>
+                  )}
+                </div>
+                {selectedPlan.discount_percentage && (
+                  <p className="text-green-600 font-semibold mt-2">
+                    You save ₱{(selectedPlan.base_price - selectedPlan.actual_price).toFixed(2)}!
+                  </p>
+                )}
+              </div>
+
+              {/* Attributes */}
+              {selectedPlan.attributes && selectedPlan.attributes.length > 0 && (
+                <div>
+                  <h4 className="text-xl font-bold text-gray-800 mb-4">Plan Features</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {selectedPlan.attributes.map((attr) => (
+                      <div key={attr.id} className="flex items-start bg-gray-50 rounded-lg p-4">
+                        <svg className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                        <div>
+                          <p className="font-semibold text-gray-800">{attr.name}</p>
+                          <p className="text-gray-600 text-sm">{attr.value}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Stock Info */}
+              {selectedPlan.stock_summary && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <p className="text-yellow-800">
+                    <span className="font-semibold">Stock:</span> {selectedPlan.stock_summary.available} of {selectedPlan.stock_summary.total} available
+                  </p>
+                </div>
+              )}
+
+              {/* Meta Data */}
+              {selectedPlan.meta_data && (
+                <div className="text-sm text-gray-500">
+                  <p className="font-semibold mb-1">Additional Information:</p>
+                  <p>{selectedPlan.meta_data}</p>
+                </div>
+              )}
+
+              {/* Checkout Button */}
+              <div className="sticky bottom-0 bg-white pt-6 border-t border-gray-200">
+                <button
+                  onClick={handleCheckout}
+                  disabled={!selectedPlan.is_active}
+                  className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-300 ${
+                    selectedPlan.is_active
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-lg hover:scale-105'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  {selectedPlan.is_active ? 'Proceed to Checkout' : 'Currently Unavailable'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+routes/_authenticated/operator/index.tsx
+// src/routes/operators.tsx
+import { createFileRoute } from '@tanstack/react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+// import { OperatorList } from '@/components/Operator/OperatorList';
+import { useState } from 'react';
+import { OperatorList } from '../../../components/Operator/OperatorList';
+
+export const Route = createFileRoute('/_authenticated/operator/')({
+  component: OperatorsPage,
+});
+
+function OperatorsPage() {
+  const [countryId] = useState<number | null>(null); // null = all countries
+  const queryClient = new QueryClient();
+
+  return (
+    <div className="min-h-screen bg-base-200">
+      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+
+        {/* Hero Header */}
+        <div className="text-center py-12">
+          <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-4">
+            All Operators
+          </h1>
+          <p className="text-xl text-base-content/70 max-w-2xl mx-auto">
+            Choose your mobile operator and recharge instantly
+          </p>
+        </div>
+
+
+        {/* Main Content */}
+        <QueryClientProvider client={queryClient}>
+          <OperatorList countryId={countryId} />
+        </QueryClientProvider>
+
+      </div>
+    </div>
+  );
+}
+
+
+routes/_authenticated/success.tsx
+// routes/success.tsx
+import { createFileRoute } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/_authenticated/success')({
+  component: ScamSuccess,
+});
+
+function ScamSuccess() {
+  return (
+    <div className="min-h-screen bg-black text-white flex items-center justify-center px-6">
+      <div className="text-center max-w-4xl">
+        {/* Big evil text */}
+        <h1 className="text-6xl sm:text-8xl font-black text-red-600 mb-8 animate-pulse">
+          THANK YOU BITCH!
+        </h1>
+
+        <h2 className="text-4xl sm:text-6xl font-extrabold mb-6 text-green-500">
+          You have been successfully SCAMMED
+        </h2>
+
+        <div className="text-2xl sm:text-3xl space-y-4 text-gray-300">
+          <p>Your card has been charged.</p>
+          <p>Your data has been sold.</p>
+          <p>Your soul now belongs to us.</p>
+        </div>
+
+        {/* Evil laughing */}
+        <div className="mt-12 text-9xl animate-bounce"></div>
+
+        <div className="mt-16">
+          <p className="text-xl text-red-500 font-bold">
+            There is no refund. There is no escape.
+          </p>
+          <p className="text-gray-500 mt-4">
+            Refresh? Too late. We already have everything.
+          </p>
+        </div>
+
+        {/* Fake "support" */}
+        <div className="mt-20 text-sm text-gray-600">
+          <p>Need help? Call our support: 1-666-DEVIL-666</p>
+          <p className="text-xs mt-2">We're not sorry.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+routes/_public.tsx
+// src/routes/_public.tsx
+import { createFileRoute, Outlet, redirect } from '@tanstack/react-router';
+import { useAuthStore } from '../stores/useAuthStore';
+
+export const Route = createFileRoute('/_public')({
+  beforeLoad: () => {
+    if (useAuthStore.getState().isAuthenticated) {
+      throw redirect({ to: '/dashboard' });
+    }
+  },
+
+  component: () => (
+    <div>
+      <Outlet />
+    </div>
+  ),
+});
+
+
+routes/_public/login.tsx
+// src/routes/_public/login.tsx
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { useState } from 'react';
+import { useAuthStore } from '../../stores/useAuthStore';
+
+export const Route = createFileRoute('/_public/login')({
+  component: () => {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    console.log('burat');
+    const { login } = useAuthStore();
+    const navigate = useNavigate();
+
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError('');
+      try {
+        await login(email, password);
+        navigate({ to: '/dashboard' });
+      } catch (err: any) {
+        setError(err.response?.data?.message || 'Login failed');
+      }
+    };
+
+    return (
+      <>
+        <h2 className="text-3xl font-bold text-center mb-8">Welcome back</h2>
+
+        {error && <div className="alert alert-error mb-6">{error}</div>}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">Email</span>
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="input input-bordered input-lg"
+              required
+            />
+          </div>
+
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">Password</span>
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="input input-bordered input-lg"
+              required
+            />
+          </div>
+
+          <button type="submit" className="btn btn-primary btn-lg w-full">
+            Login
+          </button>
+        </form>
+
+        <p className="text-center mt-6">
+          No account?{' '}
+          <Link to="/register" className="link link-primary">
+            Sign up
+          </Link>
+        </p>
+      </>
+    );
+  },
+});
+
+
+routes/_public/register.tsx
+// src/routes/_public/register.tsx
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { useState } from 'react';
+import { useAuthStore } from '../../stores/useAuthStore'; // adjust path if needed
+
+export const Route = createFileRoute('/_public/register')({
+    component: RegisterPage,
+});
+
+function RegisterPage() {
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        password: '',
+        password_confirmation: '',
+        phone: '',
+    });
+    const [error, setError] = useState('');
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+    const [isLoading, setIsLoading] = useState(false);
+
+    const { register } = useAuthStore(); // you'll add this to your store
+    const navigate = useNavigate();
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+        // Clear field error when user starts typing
+        if (fieldErrors[name]) {
+            setFieldErrors(prev => ({ ...prev, [name]: [] }));
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setFieldErrors({});
+        setIsLoading(true);
+
+        try {
+            await register(formData); // this will hit your /api/register endpoint
+            // On success → redirect to dashboard or login
+            navigate({ to: '/dashboard' });
+        } catch (err: any) {
+            if (err.response?.status === 422) {
+                // Laravel validation error
+                const errors = err.response.data.errors || {};
+                setFieldErrors(errors);
+
+                // Optional: show general message
+                // const messages = Object.values(errors).flat();
+                setError('Please check the form for errors');
+            } else {
+                setError(err.response?.data?.message || 'Registration failed. Please try again.');
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <>
+            <h2 className="text-3xl font-bold text-center mb-8">Create your account</h2>
+
+            {error && (
+                <div className="alert alert-error mb-6 shadow-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none"
+                        viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                            d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>{error}</span>
+                </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Name */}
+                <div className="form-control">
+                    <label className="label">
+                        <span className="label-text">Full Name</span>
+                    </label>
+                    <input type="text" name="name" value={formData.name} onChange={handleChange} className={`input
+                        input-bordered input-lg ${fieldErrors.name ? 'input-error' : ''}`} required autoFocus />
+                    {fieldErrors.name && (
+                        <label className="label">
+                            <span className="label-text-alt text-error">{fieldErrors.name[0]}</span>
+                        </label>
+                    )}
+                </div>
+
+                {/* Email */}
+                <div className="form-control">
+                    <label className="label">
+                        <span className="label-text">Email</span>
+                    </label>
+                    <input type="email" name="email" value={formData.email} onChange={handleChange} className={`input
+                        input-bordered input-lg ${fieldErrors.email ? 'input-error' : ''}`} required />
+                    {fieldErrors.email && (
+                        <label className="label">
+                            <span className="label-text-alt text-error">{fieldErrors.email[0]}</span>
+                        </label>
+                    )}
+                </div>
+
+                {/* Phone (optional) */}
+                <div className="form-control">
+                    <label className="label">
+                        <span className="label-text">Phone <span className="text-gray-400">(optional)</span></span>
+                    </label>
+                    <input type="tel" name="phone" value={formData.phone} onChange={handleChange}
+                        placeholder="+1234567890" className="input input-bordered input-lg" />
+                </div>
+
+                {/* Password */}
+                <div className="form-control">
+                    <label className="label">
+                        <span className="label-text">Password</span>
+                    </label>
+                    <input type="password" name="password" value={formData.password} onChange={handleChange}
+                        className={`input input-bordered input-lg ${fieldErrors.password ? 'input-error' : ''}`}
+                        required />
+                    {fieldErrors.password && (
+                        <label className="label">
+                            <span className="label-text-alt text-error">{fieldErrors.password[0]}</span>
+                        </label>
+                    )}
+                </div>
+
+                {/* Confirm Password */}
+                <div className="form-control">
+                    <label className="label">
+                        <span className="label-text">Confirm Password</span>
+                    </label>
+                    <input type="password" name="password_confirmation" value={formData.password_confirmation}
+                        onChange={handleChange} className="input input-bordered input-lg" required />
+                </div>
+
+                <button type="submit" disabled={isLoading} className="btn btn-primary btn-lg w-full">
+                    {isLoading ? (
+                        <>
+                            <span className="loading loading-spinner"></span>
+                            Creating account...
+                        </>
+                    ) : (
+                        'Sign Up'
+                    )}
+                </button>
+            </form>
+
+            <p className="text-center mt-8 text-sm text-gray-600">
+                Already have an account?{' '}
+                <Link to="/login" className="link link-primary font-medium">
+                    Log in here
+                </Link>
+            </p>
+        </>
+    );
+}
+
+
+routes/profile.tsx
+import { createFileRoute } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/profile')({
+  component: About,
+});
+
+function About() {
+  return (
+    <div className="p-2">
+      Hello from About! Ako si Adrian Kantutman
+      <div className="breadcrumbs text-sm">
+        <ul>
+          <li>
+            <a>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                className="h-4 w-4 stroke-current"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                ></path>
+              </svg>
+              Home
+            </a>
+          </li>
+          <li>
+            <a>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                className="h-4 w-4 stroke-current"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                ></path>
+              </svg>
+              Documents
+            </a>
+          </li>
+          <li>
+            <span className="inline-flex items-center gap-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                className="h-4 w-4 stroke-current"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                ></path>
+              </svg>
+              Add Document
+            </span>
+          </li>
+        </ul>
+      </div>
+      {/* The button to open modal */}
+      <label htmlFor="my_modal_6" className="btn">
+        open modal
+      </label>
+      {/* Put this part before </body> tag */}
+      <input type="checkbox" id="my_modal_6" className="modal-toggle" />
+      <div className="modal" role="dialog">
+        <div className="modal-box">
+          <h3 className="text-lg font-bold">Hello!</h3>
+          <p className="py-4">This modal works with a hidden checkbox!</p>
+          <div className="card bg-base-100 w-96 shadow-sm">
+            <figure>
+              <img
+                src="https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp"
+                alt="Shoes"
+              />
+            </figure>
+            <div className="card-body">
+              <h2 className="card-title">Card Title</h2>
+              <p>
+                A card component has a figure, a body part, and inside body
+                there are title and actions parts
+              </p>
+              <div className="card-actions justify-end">
+                <button className="btn btn-primary">Buy Now</button>
+              </div>
+            </div>
+          </div>
+          <div className="modal-action">
+            <label htmlFor="my_modal_6" className="btn">
+              Close!
+            </label>
+          </div>
+        </div>
+      </div>
+      <fieldset className="fieldset bg-base-100 border-base-300 rounded-box w-64 border p-4">
+        <legend className="fieldset-legend">Login options</legend>
+        <label className="label">
+          <input type="checkbox" defaultChecked className="toggle" />
+          Remember me
+        </label>
+      </fieldset>
+      <div className="drawer">
+        <input id="my-drawer-1" type="checkbox" className="drawer-toggle" />
+        <div className="drawer-content">
+          {/* Page content here */}
+          <label htmlFor="my-drawer-1" className="btn drawer-button">
+            Open drawer
+          </label>
+        </div>
+        <div className="drawer-side">
+          <label
+            htmlFor="my-drawer-1"
+            aria-label="close sidebar"
+            className="drawer-overlay"
+          ></label>
+          <ul className="menu bg-base-200 min-h-full w-80 p-4">
+            {/* Sidebar content here */}
+            <li>
+              <a>Sidebar Item 1</a>
+            </li>
+            <li>
+              <a>Sidebar Item 2</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div className="card bg-base-100 w-96 shadow-sm">
+        <figure>
+          <img
+            src="https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp"
+            alt="Shoes"
+          />
+        </figure>
+        <div className="card-body">
+          <h2 className="card-title">Card Title</h2>
+          <p>
+            A card component has a figure, a body part, and inside body there
+            are title and actions parts
+          </p>
+          <div className="card-actions justify-end">
+            <button className="btn btn-primary">Buy Now</button>
+          </div>
+        </div>
+      </div>
+      <label className="input">
+        <svg
+          className="h-[1em] opacity-50"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+        >
+          <g
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            strokeWidth="2.5"
+            fill="none"
+            stroke="currentColor"
+          >
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.3-4.3"></path>
+          </g>
+        </svg>
+        <input type="search" className="grow" placeholder="Search" />
+        <kbd className="kbd kbd-sm">⌘</kbd>
+        <kbd className="kbd kbd-sm">K</kbd>
+      </label>
+      <label className="input">
+        <svg
+          className="h-[1em] opacity-50"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+        >
+          <g
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            strokeWidth="2.5"
+            fill="none"
+            stroke="currentColor"
+          >
+            <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path>
+            <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
+          </g>
+        </svg>
+        <input type="text" className="grow" placeholder="index.php" />
+      </label>
+      <label className="input">
+        Path
+        <input type="text" className="grow" placeholder="src/app/" />
+        <span className="badge badge-neutral badge-xs">Optional</span>
+      </label>
+      <ul className="list bg-base-100 rounded-box shadow-md">
+        <li className="p-4 pb-2 text-xs opacity-60 tracking-wide">
+          Most played songs this week
+        </li>
+
+        <li className="list-row">
+          <div>
+            <img
+              className="size-10 rounded-box"
+              src="https://img.daisyui.com/images/profile/demo/1@94.webp"
+            />
+          </div>
+          <div>
+            <div>Dio Lupa</div>
+            <div className="text-xs uppercase font-semibold opacity-60">
+              Remaining Reason
+            </div>
+          </div>
+          <button className="btn btn-square btn-ghost">
+            <svg
+              className="size-[1.2em]"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+            >
+              <g
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                strokeWidth="2"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path d="M6 3L20 12 6 21 6 3z"></path>
+              </g>
+            </svg>
+          </button>
+          <button className="btn btn-square btn-ghost">
+            <svg
+              className="size-[1.2em]"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+            >
+              <g
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                strokeWidth="2"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path>
+              </g>
+            </svg>
+          </button>
+        </li>
+
+        <li className="list-row">
+          <div>
+            <img
+              className="size-10 rounded-box"
+              src="https://img.daisyui.com/images/profile/demo/4@94.webp"
+            />
+          </div>
+          <div>
+            <div>Ellie Beilish</div>
+            <div className="text-xs uppercase font-semibold opacity-60">
+              Bears of a fever
+            </div>
+          </div>
+          <button className="btn btn-square btn-ghost">
+            <svg
+              className="size-[1.2em]"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+            >
+              <g
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                strokeWidth="2"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path d="M6 3L20 12 6 21 6 3z"></path>
+              </g>
+            </svg>
+          </button>
+          <button className="btn btn-square btn-ghost">
+            <svg
+              className="size-[1.2em]"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+            >
+              <g
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                strokeWidth="2"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path>
+              </g>
+            </svg>
+          </button>
+        </li>
+
+        <li className="list-row">
+          <div>
+            <img
+              className="size-10 rounded-box"
+              src="https://img.daisyui.com/images/profile/demo/3@94.webp"
+            />
+          </div>
+          <div>
+            <div>Sabrino Gardener</div>
+            <div className="text-xs uppercase font-semibold opacity-60">
+              Cappuccino
+            </div>
+          </div>
+          <button className="btn btn-square btn-ghost">
+            <svg
+              className="size-[1.2em]"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+            >
+              <g
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                strokeWidth="2"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path d="M6 3L20 12 6 21 6 3z"></path>
+              </g>
+            </svg>
+          </button>
+          <button className="btn btn-square btn-ghost">
+            <svg
+              className="size-[1.2em]"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+            >
+              <g
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                strokeWidth="2"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path>
+              </g>
+            </svg>
+          </button>
+        </li>
+      </ul>
+    </div>
+  );
+}
+
+
+routes/setting.tsx
+import { createFileRoute } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/setting')({
+  component: RouteComponent,
+});
+
+function RouteComponent() {
+  return (
+    <div>
+      <div className="breadcrumbs text-sm">
+        <ul>
+          <li>
+            <a>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                className="h-4 w-4 stroke-current"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                ></path>
+              </svg>
+              Home
+            </a>
+          </li>
+          <li>
+            <a>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                className="h-4 w-4 stroke-current"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                ></path>
+              </svg>
+              Documents
+            </a>
+          </li>
+          <li>
+            <span className="inline-flex items-center gap-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                className="h-4 w-4 stroke-current"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                ></path>
+              </svg>
+              Add Document
+            </span>
+          </li>
+        </ul>
+      </div>
+
+      <div className="carousel carousel-vertical rounded-box h-96">
+        <div className="carousel-item h-full">
+          <img src="https://img.daisyui.com/images/stock/photo-1559703248-dcaaec9fab78.webp" />
+        </div>
+        <div className="carousel-item h-full">
+          <img src="https://img.daisyui.com/images/stock/photo-1565098772267-60af42b81ef2.webp" />
+        </div>
+        <div className="carousel-item h-full">
+          <img src="https://img.daisyui.com/images/stock/photo-1572635148818-ef6fd45eb394.webp" />
+        </div>
+        <div className="carousel-item h-full">
+          <img src="https://img.daisyui.com/images/stock/photo-1494253109108-2e30c049369b.webp" />
+        </div>
+        <div className="carousel-item h-full">
+          <img src="https://img.daisyui.com/images/stock/photo-1550258987-190a2d41a8ba.webp" />
+        </div>
+        <div className="carousel-item h-full">
+          <img src="https://img.daisyui.com/images/stock/photo-1559181567-c3190ca9959b.webp" />
+        </div>
+        <div className="carousel-item h-full">
+          <img src="https://img.daisyui.com/images/stock/photo-1601004890684-d8cbf643f5f2.webp" />
+        </div>
+      </div>
+
+      <div className="flex w-52 flex-col gap-4">
+        <div className="skeleton h-32 w-full"></div>
+        <div className="skeleton h-4 w-28"></div>
+        <div className="skeleton h-4 w-full"></div>
+        <div className="skeleton h-4 w-full"></div>
+      </div>
+
+      <input
+        type="text"
+        className="input pika-single"
+        defaultValue="Pick a date"
+      />
+
+      <form>
+        <input
+          className="btn"
+          type="checkbox"
+          name="frameworks"
+          aria-label="Svelte"
+        />
+        <input
+          className="btn"
+          type="checkbox"
+          name="frameworks"
+          aria-label="Vue"
+        />
+        <input
+          className="btn"
+          type="checkbox"
+          name="frameworks"
+          aria-label="React"
+        />
+        <input className="btn btn-square" type="reset" value="×" />
+      </form>
+
+      <div className="rating">
+        <input
+          type="radio"
+          name="rating-2"
+          className="mask mask-star-2 bg-orange-400"
+          aria-label="1 star"
+        />
+        <input
+          type="radio"
+          name="rating-2"
+          className="mask mask-star-2 bg-orange-400"
+          aria-label="2 star"
+          defaultChecked
+        />
+        <input
+          type="radio"
+          name="rating-2"
+          className="mask mask-star-2 bg-orange-400"
+          aria-label="3 star"
+        />
+        <input
+          type="radio"
+          name="rating-2"
+          className="mask mask-star-2 bg-orange-400"
+          aria-label="4 star"
+        />
+        <input
+          type="radio"
+          name="rating-2"
+          className="mask mask-star-2 bg-orange-400"
+          aria-label="5 star"
+        />
+      </div>
+    </div>
+  );
+}
+
+
+lib/api-client.ts
+// frontend/src/lib/api-client.ts
+import axios from 'axios';
+import type { AxiosInstance, AxiosRequestConfig } from 'axios';
+
+export interface CouponImage {
+  id: number;
+  url: string; // /storage/1/01KB51R6EC9H7ZBH65KAB90VRK.png
+  thumbnail: string; // /storage/1/conversions/01KB51R6EC9H7ZBH65KAB90VRK-thumbnail.jpg
+  name: string;
+}
+
+export interface Coupon {
+  id: number;
+  selling_price: {
+    amount: string;
+    currency: string;
+    formatted: string;
+  };
+  denomination: {
+    amount: string;
+    currency: string;
+    formatted: string;
+  };
+  coupon_code: string;
+  validity_days: number;
+  is_available: boolean;
+  images: CouponImage[]; // ✅ Added images array
+  created_at: string;
+  updated_at: string;
+  operator: {
+    id: number;
+    name: string;
+    code: string;
+    logo_url: string | null;
+    country: {
+      id: number;
+      name: string;
+      code: string;
+      currency: string;
+    };
+  };
+  plan_type: {
+    id: number;
+    name: string;
+    description: string;
+  };
+}
+
+export interface Operator {
+  id: number;
+  name: string;
+  code: string;
+  logo: string | null;
+  has_data_plans: boolean;
+  has_talktime: boolean;
+  plan_types?: Plan[]; // ← optional + array
+}
+
+
+export interface PlanAttribute {
+  id: number;
+  name: string;
+  value: string | number | boolean;
+}
+
+export interface Media {
+  id: number;
+  url: string;
+  thumb_url: string;
+  name: string;
+  size: number;
+  mime_type: string;
+}
+
+export interface PlanTypeResource {
+  id: number;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  available_coupons_count: number;
+}
+
+export interface StockSummary {
+  total: number;
+  available: number;
+}
+
+export interface Plan {
+  id: number;
+  plan_type_id: number;
+  name: string;
+  description: string | null;
+  base_price: number;
+  actual_price: number;
+  is_active: boolean;
+  discount_percentage?: number;
+  attributes: PlanAttribute[];
+  plan_type?: PlanTypeResource;
+  media?: Media[];
+  stock_summary?: StockSummary;
+  meta_data?: any;
+  created_at?: string;
+  updated_at?: string;
+}
+
+
+export interface PaginationLink {
+  url: string | null;
+  label: string;
+  page: number | null;
+  active: boolean;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  links: {
+    first: string;
+    last: string;
+    prev: string | null;
+    next: string | null;
+  };
+  meta: {
+    current_page: number;
+    from: number;
+    last_page: number;
+    links: PaginationLink[];
+    path: string;
+    per_page: number;
+    to: number;
+    total: number;
+  };
+}
+
+class ApiClient {
+  private client: AxiosInstance;
+  private isTauri: boolean;
+
+  constructor() {
+    this.isTauri =
+      typeof window !== 'undefined' && (window as any).__TAURI__ !== undefined;
+    this.client = axios.create({
+      baseURL: this.getBaseUrl(),
+      timeout: 10000,
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+    });
+    this.setupInterceptors();
+  }
+
+  private getBaseUrl(): string {
+    if (this.isTauri) {
+      return 'https://coupon-finalz.ddev.site/api/v1';
+    }
+    return 'https://coupon-finalz.ddev.site/api/v1';
+  }
+
+  private setupInterceptors() {
+    // Request interceptor
+    this.client.interceptors.request.use(
+      config => {
+        // Add auth token if available
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+        if (this.isTauri) {
+          config.headers['X-Platform'] = 'tauri';
+        }
+        return config;
+      },
+      error => Promise.reject(error)
+    );
+    // Response interceptor
+    this.client.interceptors.response.use(
+      response => response,
+      async error => {
+        if (error.response?.status === 401) {
+          // Handle token refresh or logout
+          localStorage.removeItem('auth_token');
+          window.location.href = '/login';
+        }
+        return Promise.reject(error);
+      }
+    );
+  }
+
+  // ✅ PUBLIC METHODS - Expose API methods
+  async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    const response = await this.client.get<T>(url, config);
+    return response.data;
+  }
+
+  async post<T = any>(
+    url: string,
+    data?: any,
+    config?: AxiosRequestConfig
+  ): Promise<T> {
+    const response = await this.client.post<T>(url, data, config);
+    return response.data;
+  }
+
+  async put<T = any>(
+    url: string,
+    data?: any,
+    config?: AxiosRequestConfig
+  ): Promise<T> {
+    const response = await this.client.put<T>(url, data, config);
+    return response.data;
+  }
+
+  async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    const response = await this.client.delete<T>(url, config);
+    return response.data;
+  }
+}
+
+// ✅ Image URL Helper Function
+export function getImageUrl(
+  imagePath: string | null | undefined,
+  type: 'full' | 'thumbnail' = 'full'
+): string {
+  // ✅ Handle null/undefined
+  if (!imagePath) {
+    return type === 'full'
+      ? '/api/placeholder/400/300'
+      : '/api/placeholder/200/150';
+  }
+  const trimmedPath = imagePath.trim();
+  // ✅ SMART LOGIC: Check if URL is already complete
+  if (trimmedPath.startsWith('http://') || trimmedPath.startsWith('https://')) {
+    console.log(`✅ getImageUrl: Already full URL: ${trimmedPath}`);
+    return trimmedPath; // ✅ Return as-is
+  }
+  // ✅ Clean relative path
+  let cleanPath = trimmedPath;
+  if (!cleanPath.startsWith('/')) {
+    cleanPath = `/${cleanPath}`;
+  }
+  // ✅ Platform detection
+  const isTauri =
+    typeof window !== 'undefined' &&
+    (window as any).__TAURI__ !== undefined &&
+    (window as any).__TAURI__.platform !== undefined;
+  console.log(`🔍 getImageUrl - isTauri: ${isTauri}, Path: "${cleanPath}"`);
+  if (isTauri) {
+    return `https://coupon-finalz.ddev.site/dashboard${cleanPath}`;
+  }
+  // Web: Relative path
+  return cleanPath;
+}
+
+// ✅ Get first available image for a coupon
+export function getCouponImage(coupon: Coupon | null | undefined): string {
+  if (!coupon?.images?.[0]?.url) {
+    console.log('⚠️ getCouponImage: No images, using placeholder');
+    return '/api/placeholder/400/300';
+  }
+  const rawPath = coupon.images[0].url.trim();
+  // ✅ SMART LOGIC: Check if already full URL
+  if (rawPath.startsWith('http://') || rawPath.startsWith('https://')) {
+    console.log(
+      `✅ getCouponImage(${coupon.id}): Already full URL: ${rawPath}`
+    );
+    return rawPath;
+  }
+  console.log(`🔍 getCouponImage(${coupon.id}): Raw path = "${rawPath}"`);
+  // Use getImageUrl for consistent logic
+  const finalUrl = getImageUrl(rawPath);
+  console.log(`✅ getCouponImage(${coupon.id}): Final URL = "${finalUrl}"`);
+  return finalUrl;
+}
+
+// ✅ Fetch single coupon
+export async function fetchPlanById(id: number): Promise<Coupon | null> {
+  try {
+    const response = await apiClient.get<{ data: Coupon }>(`/plans/${id}`);
+    const coupon = response.data; // ✅ Extract .data like fetchCoupons
+    return coupon;
+  } catch (error: any) {
+    if (error.response?.status === 404) {
+      console.warn(`Coupon ${id} not found`);
+      return null;
+    }
+    return null;
+  }
+}
+
+// ✅ NEW: Fetch operators by country
+export async function fetchOperatorsByCountry(
+  countryId: number
+): Promise<PaginatedResponse<Operator>> {
+  try {
+    const response = await apiClient.get<PaginatedResponse<Operator>>(
+      `/plan-types`
+    );
+        console.log(response);
+    return response;
+  } catch (error) {
+    console.error(`fetchOperatorsByCountry error for ID ${countryId}:`, error);
+    throw error;
+  }
+}
+
+// ✅ NEW: Fetch single operator with plan types
+export async function fetchOperatorById(id: number): Promise<Operator | null> {
+  try {
+    const response = await apiClient.get<{ data: Operator }>(`/plan-types/${id}`);
+    return response.data;
+  } catch (error: any) {
+
+    if (error.response?.status === 404) {
+      console.warn(`Operator ${id} not found`);
+      return null;
+    }
+    console.error('fetchOperatorById error:', error);
+    return null;
+  }
+}
+
+// ✅ NEW: Fetch popular operators
+export async function fetchPopularOperators(
+  limit = 12
+): Promise<PaginatedResponse<Operator>> {
+  try {
+    const response = await apiClient.get<PaginatedResponse<Operator>>(
+      `/plan-types?limit=${limit}`
+    );
+    return response;
+  } catch (error) {
+    console.error('fetchPopularOperators error:', error);
+    throw error;
+  }
+}
+
+// ✅ NEW: Fetch plan types for operator (if needed as standalone)
+export async function fetchPlanTypesForOperator(
+  operatorId: number
+): Promise<PaginatedResponse<PlanType>> {
+  try {
+    const response = await apiClient.get<PaginatedResponse<PlanType>>(
+      `/operators/${operatorId}/plan-types`
+    );
+    return response;
+  } catch (error) {
+    console.error(`fetchPlanTypesForOperator error for ID ${operatorId}:`, error);
+    throw error;
+  }
+}
+
+// ✅ Updated fetchCoupons with filters
+export async function fetchCoupons(
+  page: number = 1,
+  filters?: {
+    operator_id?: number;
+    plan_type_id?: number;
+    search?: string;
+  }
+): Promise<PaginatedResponse<Coupon>> {
+  const params = new URLSearchParams({ page: page.toString() });
+  if (filters) {
+    if (filters.operator_id) params.append('operator_id', filters.operator_id.toString());
+    if (filters.plan_type_id) params.append('plan_type_id', filters.plan_type_id.toString());
+    if (filters.search) params.append('search', filters.search);
+  }
+  return apiClient.get<PaginatedResponse<Coupon>>(`/coupons?${params.toString()}`);
+}
+
+// ✅ Also add error handling utility
+export async function apiRequest<T>(
+  url: string,
+  options: RequestInit = {}
+): Promise<T | null> {
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.status}`);
+    }
+    return (await response.json()) as T;
+  } catch (error) {
+    console.error(`API request failed for ${url}:`, error);
+    return null;
+  }
+}
+
+const apiClient = new ApiClient();
+
+// ✅ Export public API methods for convenience
+export const api = {
+  get: apiClient.get.bind(apiClient),
+  post: apiClient.post.bind(apiClient),
+  put: apiClient.put.bind(apiClient),
+  delete: apiClient.delete.bind(apiClient),
+  fetchCoupons,
+  fetchOperatorsByCountry,
+  fetchOperatorById,
+  fetchPopularOperators,
+  fetchPlanTypesForOperator,
+};
+
+export { apiClient };
+
+
+lib/image-service.ts
+// frontend/src/lib/image-service.ts
+
+interface ImageOptions {
+  width?: number;
+  height?: number;
+  quality?: number;
+  format?: 'webp' | 'avif' | 'jpg';
+  placeholder?: boolean;
+}
+
+class ImageService {
+  private cache = new Map<string, string>();
+
+  // ✅ Production CDN + Optimization
+  getOptimizedImage(
+    imagePath: string | null,
+    options: ImageOptions = {}
+  ): string {
+    if (!imagePath) {
+      return this.getPlaceholder(options.width || 400, options.height || 300);
+    }
+
+    const cacheKey = `${imagePath}-${JSON.stringify(options)}`;
+
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey)!;
+    }
+
+    const url = this.buildImageUrl(imagePath, options);
+    this.cache.set(cacheKey, url);
+    return url;
+  }
+
+  private buildImageUrl(imagePath: string, options: ImageOptions): string {
+    const {
+      width = 400,
+      height = 300,
+      quality = 80,
+      format = 'webp',
+    } = options;
+
+    // ✅ 1M+ USER STRATEGY: Multiple CDN fallbacks
+    const cdnUrls = [
+      this.buildCloudflareUrl(imagePath, {
+        width,
+        height,
+        quality,
+        format,
+      }),
+      this.buildImgixUrl(imagePath, { width, height, quality, format }),
+      this.buildCloudinaryUrl(imagePath, {
+        width,
+        height,
+        quality,
+        format,
+      }),
+      this.buildLaravelUrl(imagePath), // Final fallback
+    ];
+
+    return cdnUrls[0]; // Primary CDN
+  }
+
+  private buildCloudflareUrl(imagePath: string, options: ImageOptions): string {
+    const params = new URLSearchParams({
+      width: options.width!.toString(),
+      height: options.height!.toString(),
+      quality: options.quality!.toString(),
+      format: options.format!,
+    });
+
+    return `https://your-app.cloudflare.com/cdn-cgi/image/${params.toString()}${imagePath}`;
+  }
+
+  private buildImgixUrl(imagePath: string, options: ImageOptions): string {
+    return `https://your-app.imgix.net${imagePath}?w=${options.width}&h=${options.height}&q=${options.quality}&fm=${options.format}&auto=format`;
+  }
+
+  private buildCloudinaryUrl(imagePath: string, options: ImageOptions): string {
+    return `https://res.cloudinary.com/your-app/image/fetch/w_${options.width},h_${options.height},q_${options.quality},f_${options.format}/${encodeURIComponent(`https://coupon-finalz.ddev.site/dashboard${imagePath}`)}`;
+  }
+
+  private buildLaravelUrl(imagePath: string): string {
+    const isTauri =
+      typeof window !== 'undefined' && (window as any).__TAURI__ !== undefined;
+    return isTauri ? `https://coupon-finalz.ddev.site/dashboard${imagePath}` : imagePath;
+  }
+
+  private getPlaceholder(width: number, height: number): string {
+    // ✅ Blurhash or low-quality placeholder
+    return `https://your-app.placeholder.com/${width}x${height}/f0f0f0/cccccc?text=Coupon`;
+  }
+
+  // ✅ Preload critical images
+  preloadImages(imageUrls: string[]) {
+    imageUrls.forEach(url => {
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = url;
+      document.head.appendChild(link);
+    });
+  }
+
+  // ✅ Intersection Observer for smart loading
+  observeImages(container: HTMLElement) {
+    const observer = new IntersectionObserver(
+      entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const img = entry.target as HTMLImageElement;
+            img.src = img.dataset.src!;
+            img.classList.remove('lazy');
+            observer.unobserve(img);
+          }
+        });
+      },
+      { rootMargin: '100px' }
+    );
+
+    container.querySelectorAll('img[data-src]').forEach(img => {
+      observer.observe(img);
+    });
+  }
+}
+
+export const imageService = new ImageService();
+
+
+layouts/AppLayout.tsx
+// src/layouts/MobileLayout.tsx
+import { Link, useMatchRoute, useRouter } from '@tanstack/react-router';
+import { Home, User, Settings, LogOut, Store } from 'lucide-react';
+import { useAuthStore } from '../stores/useAuthStore';
+
+interface MobileLayoutProps {
+  children: React.ReactNode;
+}
+
+const NAV_ITEMS = [
+  { to: '/dashboard', icon: Home, label: 'Home' },
+  { to: '/', icon: Store, label: 'Store' },
+  { to: '/profile', icon: User, label: 'Profile' },
+  { to: '/settings', icon: Settings, label: 'Settings' },
+] as const;
+
+function UserDropdown() {
+  const { user, logout } = useAuthStore();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await logout();
+    router.invalidate(); // forces full redirect
+  };
+
+  const name = user?.data ? user?.data?.name : user?.name;
+
+  return (
+    <div className="dropdown dropdown-end">
+      <div
+        tabIndex={0}
+        role="button"
+        className="btn btn-ghost btn-circle avatar"
+      >
+        <div className="w-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold">
+          {name.charAt(0).toUpperCase()}
+        </div>
+      </div>
+      <ul className="menu dropdown-content rounded-box z-50 mt-3 w-52 bg-base-100 p-2 shadow">
+        <li>
+          <Link to="/">Store</Link>
+        </li>
+        <li>
+          <Link to="/profile">Profile</Link>
+        </li>
+        <li className="border-t border-base-300 mt-2 pt-2">
+          <button onClick={handleLogout} className="text-error flex gap-2">
+            <LogOut className="w-4" /> Logout
+          </button>
+        </li>
+      </ul>
+    </div>
+  );
+}
+
+function CreditIndicator() {
+  // Replace with real wallet balance from your backend later
+  // const balance = 5000 // TODO: fetch from /api/wallet or user metadata
+
+  const { user } = useAuthStore();
+
+  return (
+    <div className="badge badge-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold gap-1 px-4 py-3">
+      <span>$</span>
+      <span>{user?.data?.wallet_balance ?? user.wallet_balance ?? 0}</span>
+    </div>
+  );
+}
+
+function DockNavItem({ to, icon: Icon, label }: any) {
+  const matchRoute = useMatchRoute();
+  const isActive = matchRoute({ to });
+
+  return (
+    <Link
+      to={to}
+      className={`dock-btn ${isActive ? 'dock-active' : ''}`}
+      aria-label={label}
+      aria-current={isActive ? 'page' : undefined}
+    >
+      <Icon className="size-[1.4em]" />
+      <span className="dock-label">{label}</span>
+    </Link>
+  );
+}
+
+function BottomDock() {
+  return (
+    <nav
+      className="dock dock-lg sm:hidden fixed bottom-0 left-1/2 -translate-x-1/2 z-50"
+      role="navigation"
+    >
+      {NAV_ITEMS.map(item => (
+        <DockNavItem key={item.to} {...item} />
+      ))}
+    </nav>
+  );
+}
+
+export default function MobileLayout({ children }: MobileLayoutProps) {
+  return (
+    <div className="min-h-screen bg-base-200 pb-20 md:pb-0">
+      <div className="flex min-h-screen flex-col bg-base-100 mx-auto max-w-6xl shadow-2xl">
+        <header className="fixed top-0 left-0 right-0 z-40 bg-base-100/80 backdrop-blur-md border-b border-base-300">
+          <div className="navbar">
+            <div className="flex-1">
+              <Link
+                to="/dashboard"
+                className="btn btn-ghost text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent"
+              >
+                Swag
+              </Link>
+            </div>
+            <div className="flex-none gap-3">
+              <CreditIndicator />
+              <UserDropdown />
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-y-auto pt-20 pb-20">{children}</main>
+
+        <BottomDock />
+      </div>
+    </div>
+  );
+}
+
+
+components/Image/Image.tsx
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+
+interface OptimizedImageProps {
+  src: string | null;
+  alt: string;
+  width?: number;
+  height?: number;
+  className?: string;
+  quality?: number;
+  loading?: 'lazy' | 'eager';
+  placeholder?: 'blurhash' | 'color' | 'none';
+  forceContainerStyle?: boolean;
+}
+
+export const OptimizedImage: React.FC<OptimizedImageProps> = ({
+  src,
+  alt,
+  width = 400,
+  height = 300,
+  quality = 80,
+  loading = 'lazy',
+  className = '',
+  placeholder = 'color',
+  forceContainerStyle = false,
+  ...props
+}) => {
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
+  const [isTauri, setIsTauri] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  // Better Tauri detection with multiple checks and retry
+  useEffect(() => {
+    const detectTauri = () => {
+      // Multiple ways to detect Tauri
+      const tauriDetected =
+        typeof window !== 'undefined' &&
+        ((window as any).__TAURI__ ||
+          (window as any).__TAURI_INTERNALS__ ||
+          (window as any).tauri);
+
+      console.log('🔍 Tauri detection check:', {
+        __TAURI__: (window as any).__TAURI__,
+        __TAURI_INTERNALS__: (window as any).__TAURI_INTERNALS__,
+        tauri: (window as any).tauri,
+        userAgent: navigator.userAgent,
+      });
+
+      return !!tauriDetected;
+    };
+
+    // Initial check
+    if (detectTauri()) {
+      setIsTauri(true);
+      console.log('✅ Tauri detected on initial check');
+      return;
+    }
+
+    // If not detected initially, try again after a short delay
+    // Tauri might still be initializing
+    const timeoutId = setTimeout(() => {
+      if (detectTauri()) {
+        setIsTauri(true);
+        console.log('✅ Tauri detected on delayed check');
+      } else {
+        console.log('❌ Tauri not detected');
+        setIsTauri(false);
+      }
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, []);
+
+  // Container style - only apply in Tauri or when forced
+  const containerStyle: React.CSSProperties =
+    isTauri || forceContainerStyle
+      ? {
+          aspectRatio: `${width} / ${height}`,
+          minHeight: height,
+        }
+      : {};
+
+  useEffect(() => {
+    console.log('🔄 useEffect running with isTauri:', isTauri);
+
+    if (!src) {
+      console.log('❌ No src provided');
+      setImageSrc(null);
+      setError(true);
+      return;
+    }
+
+    let optimizedSrc = src;
+
+    // 🔧 Tauri environment support
+    if (isTauri) {
+      console.log('🔧 Processing URL for Tauri environment');
+      if (
+        src.startsWith('/') ||
+        src.startsWith('./') ||
+        src.startsWith('../')
+      ) {
+        optimizedSrc = `https://asset.localhost${
+          src.startsWith('/') ? src : `/${src}`
+        }`;
+        console.log('🔄 Converted local path to Tauri URL:', optimizedSrc);
+      } else if (src.startsWith('http://') || src.startsWith('https://')) {
+        console.log('🌐 Keeping HTTP/HTTPS URL as-is:', optimizedSrc);
+      } else {
+        console.log('❓ Unknown URL format:', src);
+      }
+    } else {
+      console.log('🌐 Web environment - using src as-is:', src);
+    }
+
+    setImageSrc(optimizedSrc);
+    setError(false);
+    setLoaded(false);
+  }, [src, width, height, quality, isTauri]);
+
+  // Rest of your component remains the same...
+  const handleLoad = useCallback(() => {
+    console.log('✅ Image loaded successfully:', imageSrc);
+    setLoaded(true);
+    setError(false);
+  }, [imageSrc]);
+
+  const handleError = useCallback(
+    (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+      console.error('❌ Image failed to load:', imageSrc, e);
+      setError(true);
+      setLoaded(true);
+    },
+    [imageSrc]
+  );
+
+  // 🔥 Error State
+  if (error) {
+    return (
+      <div
+        className={`
+          w-full h-full bg-gradient-to-br from-gray-100 to-gray-200
+          rounded-lg flex items-center justify-center ${className}
+        `}
+        style={containerStyle}
+      >
+        <div className="text-center">
+          <svg
+            className="w-12 h-12 text-gray-400 mx-auto"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1}
+              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0-2-2H6a2 2 0-2 2v12a2 2 0-2 2z"
+            />
+          </svg>
+          <p className="text-sm text-gray-500 mt-2">Failed to load image</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ⏳ Loading state (no src yet)
+  if (!imageSrc) {
+    return (
+      <div
+        className={`
+          w-full h-full bg-gradient-to-br from-blue-50 via-white to-indigo-100
+          rounded-lg flex items-center justify-center ${className}
+        `}
+        style={containerStyle}
+      >
+        <div className="animate-pulse text-center">
+          <div className="w-12 h-12 bg-gray-300 rounded-full mx-auto mb-2"></div>
+          <p className="text-sm text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`
+        relative w-full overflow-hidden rounded-lg ${className}
+      `}
+      style={containerStyle}
+    >
+      {!loaded && (
+        <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-blue-50 via-white to-indigo-100 z-10" />
+      )}
+
+      <img
+        ref={imgRef}
+        src={imageSrc}
+        alt={alt}
+        loading={loading}
+        className={`
+          w-full h-full object-cover transition-opacity duration-300
+          ${loaded ? 'opacity-100' : 'opacity-0'} relative z-20
+        `}
+        onLoad={handleLoad}
+        onError={handleError}
+        {...props}
+      />
+    </div>
+  );
+};
+
+
+components/Operator/OperatorCard.tsx
+// src/components/Operator/OperatorCard.tsx
+import React from 'react';
+import { Link } from '@tanstack/react-router';
+import { OptimizedImage } from '../Image/Image';
+import type { Operator } from '../../lib/api-client';
+
+interface OperatorCardProps {
+  operator: Operator;
+}
+
+export const OperatorCard: React.FC<OperatorCardProps> = ({ operator }) => {
+  const hasData = operator.has_data_plans;
+  const hasTalktime = operator.has_talktime;
+  const totalPlans = operator.plan_types?.reduce((sum, pt) => sum + (pt.available_coupons_count || 0), 0) || 0;
+
+  return (
+    <Link
+      to="/operator/$id"
+      params={{ id: operator.id.toString() }}
+      className="group relative block"
+      preload="intent"
+    >
+      <div className="relative overflow-hidden rounded-3xl bg-base-200/50 backdrop-blur-sm border border-base-300/30 shadow-lg hover:shadow-2xl transition-all duration-500 hover:scale-[1.02] hover:-translate-y-2">
+        {/* Gradient Top Bar */}
+        <div className="h-2 bg-gradient-to-r from-primary via-secondary to-accent" />
+
+        {/* Main Card */}
+        <div className="p-8 text-center space-y-6">
+          {/* Logo */}
+          <div className="relative mx-auto w-32 h-32">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full blur-xl scale-110 group-hover:scale-125 transition-transform duration-700" />
+            <div className="relative z-10 w-full h-full rounded-full overflow-hidden ring-4 ring-white/50 shadow-2xl">
+              <OptimizedImage
+                src={operator.logo || '/placeholder-operator.svg'}
+                alt={operator.name}
+                className="w-full h-full object-contain p-6 bg-white"
+                loading="lazy"
+              />
+            </div>
+          </div>
+
+          {/* Name */}
+          <h3 className="text-2xl font-bold tracking-tight">{operator.name}</h3>
+
+          {/* Badges */}
+          <div className="flex flex-wrap gap-2 justify-center">
+            {hasData && (
+              <span className="badge badge-lg badge-primary shadow-md">Data Plans</span>
+            )}
+            {hasTalktime && (
+              <span className="badge badge-lg badge-success shadow-md">Talktime</span>
+            )}
+            {totalPlans > 20 && (
+              <span className="badge badge-lg badge-accent shadow-md">Hot</span>
+            )}
+          </div>
+
+          {/* Stats */}
+          <div className="text-sm text-base-content/60 space-y-1">
+            <p className="font-semibold text-lg text-primary">
+              {totalPlans} plans available
+            </p>
+            <p className="text-xs">{operator?.country?.name}</p>
+          </div>
+        </div>
+
+        {/* Hover Shine */}
+        <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+      </div>
+    </Link>
+  );
+};
+
+
+components/Operator/OperatorList.tsx
+// src/components/Operator/OperatorList.tsx
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { OperatorCard } from './OperatorCard';
+import { fetchOperatorsByCountry, fetchPopularOperators } from '../../lib/api-client';
+// import { fetchPopularOperators, fetchOperatorsByCountry } from '@/lib/api-client';
+// import type { Operator } from '@/lib/api-client';
+
+interface OperatorListProps {
+  countryId: number | null; // null = show popular/all
+}
+
+export const OperatorList: React.FC<OperatorListProps> = ({ countryId }) => {
+  const [currentPage] = useState(1);
+  const [search, setSearch] = useState('');
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['operators', countryId, currentPage, search],
+    queryFn: () =>
+      countryId
+        ? fetchOperatorsByCountry(countryId)
+        : fetchPopularOperators(50), // show many for grid
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const operators = data?.data || [];
+
+  // Client-side search
+  const filtered = search
+    ? operators.filter(op =>
+        op.name.toLowerCase().includes(search.toLowerCase())
+      )
+    : operators;
+
+  return (
+    <div className="space-y-10">
+      <div className="max-w-xl mx-auto">
+        <input
+          type="text"
+          placeholder="Search operator..."
+          className="input input-bordered input-lg w-full"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      {isLoading && (
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8">
+          {[...Array(12)].map((_, i) => (
+            <div key={i} className="skeleton h-64 rounded-3xl" />
+          ))}
+        </div>
+      )}
+
+      {/* Grid */}
+      {!isLoading && filtered.length === 0 && (
+        <div className="text-center py-20 text-2xl text-base-content/50">
+          No operators found
+        </div>
+      )}
+
+      {!isLoading && filtered.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-8">
+          {filtered.map((op) => (
+            <OperatorCard key={op.id} operator={op} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+components/PlanType/PlanTypeCard.tsx
+// src/components/PlanType/PlanTypeCard.tsx
+import React from 'react';
+import { Link } from '@tanstack/react-router';
+import { PlanType } from '../../lib/api-client';
+
+interface PlanTypeCardProps {
+  planType: PlanType;
+  operatorId: Number
+}
+
+const icons: Record<string, string> = {
+  data: 'Data',
+  talktime: 'Talktime',
+  combo: 'Combo',
+  sms: 'SMS',
+  roaming: 'Roaming',
+  validity: 'Validity',
+};
+
+export const PlanTypeCard: React.FC<PlanTypeCardProps> = ({ planType, operatorId }) => {
+  const count = planType.available_coupons_count || 0;
+  const icon = icons[planType.name.toLowerCase()] || 'Target';
+
+    console.log('adi')
+    console.log(operatorId)
+
+  // The Link component automatically inherits parent route params
+  // So if you're in /operator/123, the operator ID is already known
+  return (
+    <Link
+      to="/operator/$operatorId/plan/$id"
+      params={{
+        operatorId: operatorId,
+        id: planType.id.toString(),
+      }}
+      // The operator ID (first $id) comes from the current route context
+      preload="intent"
+      className="group block"
+    >
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-base-200 to-base-300 p-8 text-center hover:shadow-2xl transition-all duration-500 hover:scale-105">
+        <div className="text-6xl mb-4">{icon}</div>
+        <h3 className="text-xl font-bold mb-2">{planType.name}</h3>
+        <p className="text-3xl font-bold text-primary">{count}</p>
+        <p className="text-sm text-base-content/70">plans available</p>
+
+        <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+      </div>
+    </Link>
+  );
+};
+
+
+components/Product/ProductCard.tsx
+// frontend/src/components/Product/ProductCard.tsx
+import { Link } from '@tanstack/react-router';
+import { OptimizedImage } from '../Image/Image';
+import type { Coupon } from '../../lib/api-client';
+import { getCouponImage } from '../../lib/api-client';
+
+interface CouponCardProps {
+  coupon: Coupon;
+}
+
+const ProductCard: React.FC<CouponCardProps> = ({ coupon }) => {
+  const imageUrl = getCouponImage(coupon);
+
+  // ✅ Tailwind v4 Gradient Utilities
+  const getOperatorGradient = (operatorCode: string) => {
+    const gradients: any = {
+      gul: 'bg-gradient-to-br from-purple-500 to-pink-500',
+      air: 'bg-gradient-to-br from-blue-500 to-indigo-600',
+      jio: 'bg-gradient-to-br from-orange-500 to-red-600',
+      vi: 'bg-gradient-to-br from-emerald-500 to-teal-600',
+      default: 'bg-gradient-to-br from-slate-500 to-purple-600',
+    };
+    return gradients[operatorCode.toLowerCase()] || gradients.default;
+  };
+
+  const gradientClass = getOperatorGradient(coupon.operator.code);
+
+  return (
+    <Link
+      to="/product/$id"
+      params={{ id: coupon.id.toString() }}
+      className="group/card relative w-full h-full block"
+      preload="intent"
+    >
+      {/* ✅ Main Card - Tailwind v4 Compatible */}
+      <div
+        className={` relative w-full h-full aspect-[4/3] rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl
+        transition-all duration-700 ease-out group-hover/card:scale-105 group-hover/card:rotate-1
+        group-hover/card:brightness-110 ${gradientClass} ${
+          !coupon.is_available ? 'grayscale opacity-60' : 'animate-pulse-glow'
+        } `}
+      >
+        {/* ✅ Animated Overlay */}
+        <div
+          className="
+                    absolute inset-0 bg-gradient-to-t from-black/20 to-transparent
+                    opacity-0 group-hover/card:opacity-100
+                    transition-opacity duration-700
+                "
+        ></div>
+
+        {/* ✅ Floating Orb Effect */}
+        <div
+          className="
+                    absolute -top-6 -right-6 w-24 h-24
+                    bg-white/10 rounded-full blur-xl
+                    animate-float opacity-0 group-hover/card:opacity-100
+                    transition-all duration-700 delay-200
+                "
+        ></div>
+
+        {/* ✅ Image Container with Glass Effect */}
+        <div
+          className="
+                    relative z-10 w-full h-full p-6 flex items-center justify-center
+                "
+        >
+          <div
+            className={` relative w-full h-4/5 max-h-48 backdrop-blur-2xl bg-white/10 border border-white/20
+                rounded-xl overflow-hidden shadow-lg hover:bg-white/20 transition-all duration-700
+                group-hover/card:shadow-emerald-500/25 `}
+          >
+            <OptimizedImage
+              src={imageUrl}
+              alt={`${coupon.operator.name} ${coupon.plan_type.name}`}
+              className={`
+                    w-full h-full object-cover group-hover/card:scale-110 group-hover/card:rotate-2 transition-all
+                    duration-1000 ease-out `}
+              loading="lazy"
+            />
+          </div>
+        </div>
+
+        {/* ✅ Shine Effect */}
+        <div
+          className="
+                    absolute inset-0 bg-gradient-to-r from-transparent
+                    via-white/30 to-transparent
+                    opacity-0 group-hover/card:opacity-100
+                    -skew-x-12 transform -translate-x-full
+                    group-hover/card:translate-x-full
+                    transition-transform duration-1000 ease-out
+                "
+        ></div>
+      </div>
+    </Link>
+  );
+};
+
+export default ProductCard;
+
+
+components/Product/ProductList.tsx
+// frontend/src/components/Product/ProductList.tsx
+import React, { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import ProductCard from './ProductCard';
+import { fetchCoupons } from '../../lib/api-client';
+import type { PaginatedResponse, Coupon } from '../../lib/api-client'; // ✅ Removed unused PaginationLink
+import { useParams, useSearch } from '@tanstack/react-router';
+
+interface ProductListProps {
+  initialPage?: number;
+    initialFilters?: {
+    operator_id?: number;
+    plan_type_id?: number;
+  };
+}
+
+const ProductList: React.FC<ProductListProps> = ({ initialPage = 1, initialFilters }) => {
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [searchQuery, setSearchQuery] = useState('');
+
+
+    interface RouteParams {
+      id: string;
+      planTypeId: string;
+   }
+
+    // In ProductList.tsx - temporary fix
+const params = useParams({
+  from: '/operator/$id/plan/$planTypeId' as any,
+});
+
+const urlOperatorId = (params as any)?.id ? Number((params as any).id) : undefined;
+const urlPlanTypeId = (params as any)?.planTypeId ? Number((params as any).planTypeId) : undefined;
+
+    const filters = {
+    operator_id: urlOperatorId ?? initialFilters?.operator_id,
+    plan_type_id: urlPlanTypeId ?? initialFilters?.plan_type_id,
+    search: searchQuery.trim() || undefined,
+  };
+
+  const queryResult = useQuery({
+    queryKey: ['coupons', currentPage, filters] as const,
+    queryFn: () => fetchCoupons(currentPage, filters),
+    // ✅ Fixed: cacheTime → gcTime (React Query v5)
+    gcTime: 10 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    retry: 3,
+    retryDelay: (attemptIndex: number) =>
+      Math.min(1000 * 2 ** attemptIndex, 30000),
+  });
+
+  // ✅ Fixed: Explicit typing to resolve React Query v5 inference issues
+  const {
+    data: paginatedCoupons,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = queryResult as {
+    data: PaginatedResponse<Coupon> | undefined;
+    isLoading: boolean;
+    isError: boolean;
+    error: Error | null;
+    refetch: () => void;
+  };
+
+  // ✅ SAFE ACCESS with proper typing
+  const coupons: Coupon[] =
+    paginatedCoupons?.data?.filter((coupon): coupon is Coupon => {
+      // ✅ Explicit type guard
+      return Boolean(
+        coupon &&
+        typeof coupon === 'object' &&
+        'id' in coupon &&
+        coupon.id !== undefined &&
+        'operator' in coupon &&
+        coupon.operator !== null
+      );
+    }) || [];
+
+  // ✅ SAFE META ACCESS
+  const totalPages = paginatedCoupons?.meta?.last_page ?? 1;
+  const totalItems = paginatedCoupons?.meta?.total ?? 0;
+  const currentItems = paginatedCoupons?.meta?.from ?? 0;
+  const lastItem = paginatedCoupons?.meta?.to ?? 0;
+
+  // ✅ SAFE FILTERING with explicit typing
+  const filteredCoupons: Coupon[] = coupons.filter(coupon => {
+    if (!coupon || !coupon.id || !coupon.operator) {
+      console.warn('Invalid coupon filtered out:', coupon);
+      return false;
+    }
+
+    if (!searchQuery.trim()) return true;
+
+    const query = searchQuery.toLowerCase().trim();
+    const matchesCode = coupon.coupon_code.toLowerCase().includes(query);
+    const matchesOperator = coupon.operator.name.toLowerCase().includes(query);
+    const matchesPlan = coupon.plan_type.name.toLowerCase().includes(query);
+
+    return matchesCode || matchesOperator || matchesPlan;
+  });
+
+    useEffect(() => {
+    setCurrentPage(1);
+  }, [filters.operator_id, filters.plan_type_id, searchQuery]);
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages && page !== currentPage) {
+      setCurrentPage(page);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // ✅ Properly typed PaginationButton component
+  interface PaginationButtonProps {
+    page: number;
+    active?: boolean;
+    children: React.ReactNode;
+    disabled?: boolean;
+    className?: string;
+  }
+
+  const PaginationButton: React.FC<PaginationButtonProps> = ({
+    page,
+    active = false,
+    children,
+    disabled = false,
+    className = '',
+  }) => (
+    <button
+      type="button"
+      onClick={() => !disabled && handlePageChange(page)}
+      disabled={disabled || page === currentPage}
+      className={`
+        btn btn-sm join-item transition-all duration-200
+        ${page === currentPage ? 'btn-primary' : 'btn-ghost hover:btn-primary'}
+        ${active ? 'btn-active' : ''}
+        ${disabled ? 'btn-disabled opacity-50 cursor-not-allowed' : ''}
+        ${className}
+      `}
+      aria-label={`Go to page ${page}`}
+    >
+      {children}
+    </button>
+  );
+
+  // ✅ Loading Skeleton Component
+  const LoadingSkeleton: React.FC = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {[...Array(8)].map((_, i) => (
+        <div key={i} className="card bg-base-100 shadow-sm overflow-hidden">
+          <figure className="w-full h-56 bg-gradient-to-br from-gray-200 via-gray-300 to-gray-400 animate-pulse rounded-t-lg" />
+          <div className="card-body p-4 space-y-3">
+            <div className="h-5 bg-gray-300 rounded w-4/5 animate-pulse" />
+            <div className="h-4 bg-gray-300 rounded w-3/5 animate-pulse" />
+            <div className="h-10 bg-gray-300 rounded-full animate-pulse" />
+            <div className="flex justify-between">
+              <div className="h-4 bg-gray-300 rounded w-16 animate-pulse" />
+              <div className="h-6 bg-gray-300 rounded w-20 animate-pulse" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  // ✅ Error State
+  if (isError && error) {
+    return (
+      <div className="max-w-4xl mx-auto p-8">
+        <div className="alert alert-error shadow-lg">
+          <div>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="stroke-current flex-shrink-0 h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span>Error loading coupons: {error.message}</span>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => refetch()}
+            >
+              Try Again
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => window.location.reload()}
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Header */}
+      <div className="text-center py-8">
+        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-4">
+          Mobile Recharge Coupons
+        </h1>
+        <p className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
+          Discover the best recharge coupons from top operators. Get amazing
+          deals on talktime, data, and combo packs.
+        </p>
+      </div>
+
+      {/* Search Bar */}
+      <div className="form-control w-full max-w-2xl mx-auto">
+        <div className="input-group">
+          <input
+            type="text"
+            placeholder="Search by coupon code, operator, or plan..."
+            className="input input-bordered w-full lg:input-lg"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+          {/* <button */}
+          {/*   type="button" */}
+          {/*   className="btn btn-square btn-primary lg:btn-lg" */}
+          {/*   onClick={() => refetch()} */}
+          {/* > */}
+          {/*   <svg */}
+          {/*     xmlns="http://www.w3.org/2000/svg" */}
+          {/*     className="h-6 w-6" */}
+          {/*     fill="none" */}
+          {/*     viewBox="0 0 24 24" */}
+          {/*     stroke="currentColor" */}
+          {/*   > */}
+          {/*     <path */}
+          {/*       strokeLinecap="round" */}
+          {/*       strokeLinejoin="round" */}
+          {/*       strokeWidth="2" */}
+          {/*       d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" */}
+          {/*     /> */}
+          {/*   </svg> */}
+          {/* </button> */}
+        </div>
+        {searchQuery.trim() && (
+          <div className="mt-2 text-sm text-center text-gray-500">
+            Found {filteredCoupons.length} of {coupons.length} coupons
+          </div>
+        )}
+      </div>
+
+      {/* Stats */}
+      {/* <div className="stats stats-vertical lg:stats-horizontal shadow bg-base-100"> */}
+      {/*   <div className="stat"> */}
+      {/*     <div className="stat-figure text-primary"> */}
+      {/*       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"> */}
+      {/*         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /> */}
+      {/*       </svg> */}
+      {/*     </div> */}
+      {/*     <div className="stat-title">Total Available</div> */}
+      {/*     <div className="stat-value">{totalItems}</div> */}
+      {/*     <div className="stat-desc">Page {currentPage} of {totalPages}</div> */}
+      {/*   </div> */}
+      {/**/}
+      {/*   <div className="stat"> */}
+      {/*     <div className="stat-figure text-success"> */}
+      {/*       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"> */}
+      {/*         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /> */}
+      {/*       </svg> */}
+      {/*     </div> */}
+      {/*     <div className="stat-title">In Stock</div> */}
+      {/*     <div className="stat-value text-success"> */}
+      {/*       {coupons.filter(c => c.is_available).length} */}
+      {/*     </div> */}
+      {/*   </div> */}
+      {/**/}
+      {/*   <div className="stat"> */}
+      {/*     <div className="stat-figure text-warning"> */}
+      {/*       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"> */}
+      {/*         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /> */}
+      {/*       </svg> */}
+      {/*     </div> */}
+      {/*     <div className="stat-title">Low Stock</div> */}
+      {/*     <div className="stat-value text-warning"> */}
+      {/*       {coupons.filter(c => c.is_low_stock).length} */}
+      {/*     </div> */}
+      {/*   </div> */}
+      {/* </div> */}
+
+      {/* Loading State */}
+      {isLoading && !paginatedCoupons && <LoadingSkeleton />}
+
+      {/* Empty State */}
+      {!isLoading && !isError && filteredCoupons.length === 0 && (
+        <div className="text-center py-16">
+          <div className="mx-auto w-32 h-32 mb-8">
+            <svg
+              className="w-full h-full text-gray-300"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+          </div>
+          <h3 className="text-2xl font-semibold text-gray-900 mb-2">
+            No coupons found
+          </h3>
+          <p className="text-gray-500 max-w-md mx-auto mb-6">
+            {searchQuery.trim()
+              ? `No coupons match "${searchQuery}". Try different keywords.`
+              : 'No coupons available right now. Check back later!'}
+          </p>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => {
+              setSearchQuery('');
+              refetch();
+            }}
+          >
+            Clear & Refresh
+          </button>
+        </div>
+      )}
+
+      {/* Coupons Grid */}
+      {filteredCoupons.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+          {filteredCoupons.map(coupon => (
+            <ProductCard key={coupon.id} coupon={coupon} />
+          ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-6 pt-8 border-t">
+          <div className="text-sm text-gray-600 font-medium">
+            Showing <span className="font-semibold">{currentItems}</span> to{' '}
+            <span className="font-semibold">
+              {Math.min(lastItem, totalItems)}
+            </span>{' '}
+            of <span className="font-semibold">{totalItems}</span> coupons
+          </div>
+
+          <div
+            className="join shadow-lg"
+            role="navigation"
+            aria-label="Pagination"
+          >
+            <PaginationButton page={1} disabled={currentPage === 1}>
+              « First
+            </PaginationButton>
+
+            <PaginationButton
+              page={currentPage - 1}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </PaginationButton>
+
+            {/* Smart Pagination Numbers */}
+            {(() => {
+              const pagesToShow = 5;
+              const startPage = Math.max(
+                1,
+                currentPage - Math.floor(pagesToShow / 2)
+              );
+              const endPage = Math.min(totalPages, startPage + pagesToShow - 1);
+
+              const pageButtons: React.ReactNode[] = [];
+
+              if (startPage > 1) {
+                pageButtons.push(
+                  <PaginationButton key={1} page={1}>
+                    1
+                  </PaginationButton>
+                );
+                if (startPage > 2) {
+                  pageButtons.push(
+                    <span
+                      key="ellipsis1"
+                      className="join-item btn btn-disabled btn-sm"
+                    >
+                      ...
+                    </span>
+                  );
+                }
+              }
+
+              for (let i = startPage; i <= endPage; i++) {
+                pageButtons.push(
+                  <PaginationButton key={i} page={i} active={i === currentPage}>
+                    {i}
+                  </PaginationButton>
+                );
+              }
+
+              if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                  pageButtons.push(
+                    <span
+                      key="ellipsis2"
+                      className="join-item btn btn-disabled btn-sm"
+                    >
+                      ...
+                    </span>
+                  );
+                }
+                pageButtons.push(
+                  <PaginationButton key={totalPages} page={totalPages}>
+                    {totalPages}
+                  </PaginationButton>
+                );
+              }
+
+              return pageButtons;
+            })()}
+
+            <PaginationButton
+              page={currentPage + 1}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </PaginationButton>
+
+            <PaginationButton
+              page={totalPages}
+              disabled={currentPage === totalPages}
+            >
+              Last »
+            </PaginationButton>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ProductList;
+
+
+components/Product/StoreWrapper.tsx
+type Props = {
+  children: React.ReactNode;
+};
+
+const StoreWrapper = (props: Props) => {
+  return (
+    <div className="grid md:grid-cols-4  grid-cols-2 gap-4">
+      {props.children}
+    </div>
+  );
+};
+
+export default StoreWrapper;
+
+

@@ -20,7 +20,6 @@ import { Route as AuthenticatedSuccessRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedOperatorIndexRouteImport } from './routes/_authenticated/operator/index'
 import { Route as AuthenticatedCheckoutIndexRouteImport } from './routes/_authenticated/checkout/index'
-import { Route as AuthenticatedProductIdRouteImport } from './routes/_authenticated/product/$id'
 import { Route as AuthenticatedOperatorIdRouteRouteImport } from './routes/_authenticated/operator/$id/route'
 import { Route as AuthenticatedOperatorIdPlanRouteRouteImport } from './routes/_authenticated/operator/$id/plan/route'
 import { Route as AuthenticatedOperatorIdPlanIdRouteImport } from './routes/_authenticated/operator/$id/plan/$id'
@@ -80,11 +79,6 @@ const AuthenticatedCheckoutIndexRoute =
     path: '/checkout/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedProductIdRoute = AuthenticatedProductIdRouteImport.update({
-  id: '/product/$id',
-  path: '/product/$id',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const AuthenticatedOperatorIdRouteRoute =
   AuthenticatedOperatorIdRouteRouteImport.update({
     id: '/operator/$id',
@@ -113,7 +107,6 @@ export interface FileRoutesByFullPath {
   '/register': typeof PublicRegisterRoute
   '/': typeof AuthenticatedIndexRoute
   '/operator/$id': typeof AuthenticatedOperatorIdRouteRouteWithChildren
-  '/product/$id': typeof AuthenticatedProductIdRoute
   '/checkout': typeof AuthenticatedCheckoutIndexRoute
   '/operator': typeof AuthenticatedOperatorIndexRoute
   '/operator/$id/plan': typeof AuthenticatedOperatorIdPlanRouteRouteWithChildren
@@ -128,7 +121,6 @@ export interface FileRoutesByTo {
   '/register': typeof PublicRegisterRoute
   '/': typeof AuthenticatedIndexRoute
   '/operator/$id': typeof AuthenticatedOperatorIdRouteRouteWithChildren
-  '/product/$id': typeof AuthenticatedProductIdRoute
   '/checkout': typeof AuthenticatedCheckoutIndexRoute
   '/operator': typeof AuthenticatedOperatorIndexRoute
   '/operator/$id/plan': typeof AuthenticatedOperatorIdPlanRouteRouteWithChildren
@@ -146,7 +138,6 @@ export interface FileRoutesById {
   '/_public/register': typeof PublicRegisterRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/operator/$id': typeof AuthenticatedOperatorIdRouteRouteWithChildren
-  '/_authenticated/product/$id': typeof AuthenticatedProductIdRoute
   '/_authenticated/checkout/': typeof AuthenticatedCheckoutIndexRoute
   '/_authenticated/operator/': typeof AuthenticatedOperatorIndexRoute
   '/_authenticated/operator/$id/plan': typeof AuthenticatedOperatorIdPlanRouteRouteWithChildren
@@ -163,7 +154,6 @@ export interface FileRouteTypes {
     | '/register'
     | '/'
     | '/operator/$id'
-    | '/product/$id'
     | '/checkout'
     | '/operator'
     | '/operator/$id/plan'
@@ -178,7 +168,6 @@ export interface FileRouteTypes {
     | '/register'
     | '/'
     | '/operator/$id'
-    | '/product/$id'
     | '/checkout'
     | '/operator'
     | '/operator/$id/plan'
@@ -195,7 +184,6 @@ export interface FileRouteTypes {
     | '/_public/register'
     | '/_authenticated/'
     | '/_authenticated/operator/$id'
-    | '/_authenticated/product/$id'
     | '/_authenticated/checkout/'
     | '/_authenticated/operator/'
     | '/_authenticated/operator/$id/plan'
@@ -288,13 +276,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCheckoutIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/product/$id': {
-      id: '/_authenticated/product/$id'
-      path: '/product/$id'
-      fullPath: '/product/$id'
-      preLoaderRoute: typeof AuthenticatedProductIdRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/operator/$id': {
       id: '/_authenticated/operator/$id'
       path: '/operator/$id'
@@ -353,7 +334,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedSuccessRoute: typeof AuthenticatedSuccessRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedOperatorIdRouteRoute: typeof AuthenticatedOperatorIdRouteRouteWithChildren
-  AuthenticatedProductIdRoute: typeof AuthenticatedProductIdRoute
   AuthenticatedCheckoutIndexRoute: typeof AuthenticatedCheckoutIndexRoute
   AuthenticatedOperatorIndexRoute: typeof AuthenticatedOperatorIndexRoute
 }
@@ -364,7 +344,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedOperatorIdRouteRoute:
     AuthenticatedOperatorIdRouteRouteWithChildren,
-  AuthenticatedProductIdRoute: AuthenticatedProductIdRoute,
   AuthenticatedCheckoutIndexRoute: AuthenticatedCheckoutIndexRoute,
   AuthenticatedOperatorIndexRoute: AuthenticatedOperatorIndexRoute,
 }

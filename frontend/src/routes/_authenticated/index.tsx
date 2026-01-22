@@ -1,146 +1,287 @@
+// routes/_authenticated/index.tsx
 import { createFileRoute } from '@tanstack/react-router';
-import useEmblaCarousel from 'embla-carousel-react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import ProductList from '../../components/Product/ProductList';
+import { useState, useCallback, useEffect } from 'react';
+import {
+  Search,
+  Shield,
+  Truck,
+  RefreshCw,
+  Zap,
+  Star,
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight
+} from 'lucide-react';
 import { OperatorList } from '../../components/Operator/OperatorList';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 export const Route = createFileRoute('/_authenticated/')({
   component: Home,
 });
 
 function Home() {
-  const [emblaRef] = useEmblaCarousel({
-    loop: true,
-    align: 'start',
-    dragFree: false, // important
-    containScroll: 'trimSnaps', // prevents weird jumps
-  });
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const slides = [
+    {
+      id: 1,
+      image: '../b1.jpg',
+      title: 'Latest Mobile Plans',
+      subtitle: 'Get the best deals on your favorite operators',
+      cta: 'Browse Plans',
+      color: 'from-indigo-600 to-purple-600',
+    },
+    {
+      id: 2,
+      image: '../b2.jpg',
+      title: 'Instant Recharge',
+      subtitle: 'Recharge your mobile in seconds',
+      cta: 'Recharge Now',
+      color: 'from-purple-600 to-pink-600',
+    },
+    {
+      id: 3,
+      image: '../b3.jpg',
+      title: 'Special Offers',
+      subtitle: 'Exclusive discounts for premium users',
+      cta: 'View Offers',
+      color: 'from-blue-600 to-indigo-600',
+    },
+  ];
+
+  const features = [
+    {
+      icon: Truck,
+      title: 'Instant Delivery',
+      description: 'Coupons delivered instantly after payment',
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
+    },
+    {
+      icon: Shield,
+      title: 'Secure Payment',
+      description: '100% secure & encrypted transactions',
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+    },
+    {
+      icon: RefreshCw,
+      title: 'Easy Returns',
+      description: '30-day refund policy',
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50',
+    },
+  ];
+
+  const nextSlide = useCallback(() => {
+    setCurrentSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
+  }, [slides.length]);
+
+  const prevSlide = useCallback(() => {
+    setCurrentSlide((prev) => (prev === 0 ? slides.length - 1 : prev - 1));
+  }, [slides.length]);
+
+  // Auto-play carousel
+  useEffect(() => {
+    if (!isAutoPlaying) return;
+
+    const interval = setInterval(() => {
+      nextSlide();
+    }, 5000);
+
+
+
+    return () => clearInterval(interval);
+  }, [isAutoPlaying, nextSlide]);
+
 
   const queryClient = new QueryClient();
 
   return (
-    <div className="min-h-screen bg-base-200">
-      {' '}
-      {/* Same background as product page */}
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {' '}
-        {/* Centered content like product page */}
-        {/* Hero Carousel */}
-        <div className="mb-12">
-          <div
-            className="embla overflow-hidden rounded-2xl shadow-2xl"
-            ref={emblaRef}
-          >
-            <div className="embla__container flex">
-              {/* Slide 1 */}
-              <div className="embla__slide flex-[0_0_100%] min-w-0">
-                <div className="relative">
-                  <img
-                    src="../b3.jpg"
-                    alt="Latest Phones"
-                    className="w-full h-64 sm:h-80 md:h-96 lg:h-[500px] object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                  <div className="absolute bottom-8 left-8 text-white"></div>
-                </div>
-              </div>
-
-              <div className="embla__slide flex-[0_0_100%] min-w-0">
-                <div className="relative">
-                  <img
-                    src="../b2.jpg"
-                    alt="Premium Collection"
-                    className="w-full h-64 sm:h-80 md:h-96 lg:h-[500px] object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                  <div className="absolute bottom-8 left-8 text-white"></div>
-                </div>
-              </div>
-
-              <div className="embla__slide flex-[0_0_100%] min-w-0">
-                <div className="relative">
-                  <img
-                    src="../b1.jpg"
-                    alt="Best Deals"
-                    className="w-full h-64 sm:h-80 md:h-96 lg:h-[500px] object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                  <div className="absolute bottom-8 left-8 text-white"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <QueryClientProvider client={queryClient}>
-          {/* Featured Products Section */}
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-center mb-10">Rigodon</h2>
-            <OperatorList countryId={null}/>
-          </div>
-        </QueryClientProvider>
-        {/* Optional: Additional Sections */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
-          <div className="text-center p-8 bg-base-100 rounded-2xl shadow-lg">
-            <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
-              <svg
-                className="w-10 h-10 text-primary"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Free Shipping</h3>
-            <p className="text-base-content/70">On all orders over $500</p>
-          </div>
-
-          <div className="text-center p-8 bg-base-100 rounded-2xl shadow-lg">
-            <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
-              <svg
-                className="w-10 h-10 text-primary"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Secure Payment</h3>
-            <p className="text-base-content/70">100% secure transactions</p>
-          </div>
-
-          <div className="text-center p-8 bg-base-100 rounded-2xl shadow-lg">
-            <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
-              <svg
-                className="w-10 h-10 text-primary"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Easy Returns</h3>
-            <p className="text-base-content/70">30-day return policy</p>
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      {/* Search Bar - Sticky Mobile Header */}
+      <div className="sticky top-0 z-40 bg-white border-b border-gray-200 px-4 py-3">
+        <div className="max-w-7xl mx-auto">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search operators, plans, or coupons..."
+              className="w-full pl-12 pr-4 py-3 bg-gray-100 rounded-xl border-0 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+              onFocus={() => setIsAutoPlaying(false)}
+              onBlur={() => setIsAutoPlaying(true)}
+            />
           </div>
         </div>
       </div>
+
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* Hero Carousel */}
+        <section className="mb-8">
+          <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800">
+            {/* Carousel Image */}
+            <div className="relative h-64 md:h-80 lg:h-96">
+              <img
+                src={slides[currentSlide].image}
+                alt={slides[currentSlide].title}
+                className="w-full h-full object-cover opacity-40"
+                loading="eager"
+              />
+
+              {/* Gradient Overlay */}
+              <div className={`absolute inset-0 bg-gradient-to-r ${slides[currentSlide].color} opacity-80 mix-blend-multiply`} />
+
+              {/* Content */}
+              <div className="absolute inset-0 flex flex-col justify-center p-6 md:p-10">
+                <div className="max-w-lg">
+                  <h1 className="text-2xl md:text-4xl font-bold text-white mb-3">
+                    {slides[currentSlide].title}
+                  </h1>
+                  <p className="text-gray-200 text-sm md:text-base mb-6">
+                    {slides[currentSlide].subtitle}
+                  </p>
+                  <button className="inline-flex items-center gap-2 bg-white text-gray-900 font-semibold px-6 py-3 rounded-xl hover:bg-gray-100 active:scale-95 transition-all">
+                    {slides[currentSlide].cta}
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Carousel Controls */}
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-4">
+              <button
+                onClick={prevSlide}
+                className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/30 transition-colors"
+                aria-label="Previous slide"
+              >
+                <ChevronLeft className="w-5 h-5 text-white" />
+              </button>
+
+              {/* Dots */}
+              <div className="flex items-center gap-2">
+                {slides.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentSlide(index)}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      index === currentSlide
+                        ? 'bg-white w-6'
+                        : 'bg-white/50 hover:bg-white/70'
+                    }`}
+                    aria-label={`Go to slide ${index + 1}`}
+                  />
+                ))}
+              </div>
+
+              <button
+                onClick={nextSlide}
+                className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/30 transition-colors"
+                aria-label="Next slide"
+              >
+                <ChevronRight className="w-5 h-5 text-white" />
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* Features Section */}
+        <section className="mb-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {features.map((feature) => (
+              <div
+                key={feature.title}
+                className={`${feature.bgColor} rounded-2xl p-6 hover:shadow-lg transition-shadow`}
+              >
+                <div className="flex items-start gap-4">
+                  <div className={`${feature.bgColor} p-3 rounded-xl`}>
+                    <feature.icon className={`w-6 h-6 ${feature.color}`} />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">
+                      {feature.title}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {feature.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Operators Section */}
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Zap className="w-5 h-5 text-indigo-600" />
+                <h2 className="text-xl md:text-2xl font-bold text-gray-900">
+                  Popular Operators
+                </h2>
+              </div>
+              <p className="text-gray-600">
+                Choose from top mobile operators
+              </p>
+            </div>
+            <button className="hidden sm:flex items-center gap-2 text-indigo-600 font-semibold hover:text-indigo-700 transition-colors">
+              View all
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Operators Grid - Optimized for mobile */}
+        <QueryClientProvider client={queryClient}>
+          <OperatorList countryId={null} />
+        </QueryClientProvider>
+        </section>
+
+        {/* Promo Banner */}
+        <section className="mb-10">
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 md:p-8">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-3">
+                  <Star className="w-5 h-5 text-yellow-300" />
+                  <span className="text-yellow-100 font-semibold">
+                    Premium Member
+                  </span>
+                </div>
+                <h3 className="text-xl md:text-2xl font-bold text-white mb-2">
+                  Get 20% Off Your First Recharge
+                </h3>
+                <p className="text-indigo-100">
+                  Use code: WELCOME20 at checkout
+                </p>
+              </div>
+              <button className="bg-white text-indigo-600 font-semibold px-6 py-3 rounded-xl hover:bg-gray-100 active:scale-95 transition-all whitespace-nowrap">
+                Claim Offer
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* Quick Stats */}
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-xl p-4 border border-gray-200">
+            <div className="text-2xl font-bold text-gray-900 mb-1">50+</div>
+            <div className="text-sm text-gray-600">Operators</div>
+          </div>
+          <div className="bg-white rounded-xl p-4 border border-gray-200">
+            <div className="text-2xl font-bold text-gray-900 mb-1">1000+</div>
+            <div className="text-sm text-gray-600">Plans</div>
+          </div>
+          <div className="bg-white rounded-xl p-4 border border-gray-200">
+            <div className="text-2xl font-bold text-gray-900 mb-1">24/7</div>
+            <div className="text-sm text-gray-600">Support</div>
+          </div>
+          <div className="bg-white rounded-xl p-4 border border-gray-200">
+            <div className="text-2xl font-bold text-gray-900 mb-1">10K+</div>
+            <div className="text-sm text-gray-600">Users</div>
+          </div>
+        </section>
+      </main>
     </div>
   );
 }
