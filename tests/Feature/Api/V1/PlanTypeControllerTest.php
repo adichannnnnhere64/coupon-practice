@@ -64,7 +64,7 @@ describe('PlanTypeController', function () {
                         'id',
                         'name',
                         'slug',
-                        'plans',
+                        'plan_types',
                     ]
                 ])
                 ->assertJsonPath('data.id', $planType->id);

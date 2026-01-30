@@ -12,7 +12,6 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { OperatorList } from '../../components/Operator/OperatorList';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 export const Route = createFileRoute('/_authenticated/')({
@@ -98,16 +97,16 @@ function Home() {
   const queryClient = new QueryClient();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="min-h-screen ">
       {/* Search Bar - Sticky Mobile Header */}
-      <div className="sticky top-0 z-40 bg-white border-b border-gray-200 px-4 py-3">
+      <div className="sticky top-0 z-40  border-b border-gray-200 px-4 py-3">
         <div className="max-w-7xl mx-auto">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
               placeholder="Search operators, plans, or coupons..."
-              className="w-full pl-12 pr-4 py-3 bg-gray-100 rounded-xl border-0 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+              className="w-full pl-12 pr-4 py-3 bg-gray-100 rounded-xl border-0 focus:ring-2 focus:ring-indigo-500 transition-all"
               onFocus={() => setIsAutoPlaying(false)}
               onBlur={() => setIsAutoPlaying(true)}
             />
@@ -140,7 +139,7 @@ function Home() {
                   <p className="text-gray-200 text-sm md:text-base mb-6">
                     {slides[currentSlide].subtitle}
                   </p>
-                  <button className="inline-flex items-center gap-2 bg-white text-gray-900 font-semibold px-6 py-3 rounded-xl hover:bg-gray-100 active:scale-95 transition-all">
+                  <button className="inline-flex items-center gap-2 text-gray-900 font-semibold px-6 py-3 rounded-xl hover:bg-gray-100 active:scale-95 transition-all">
                     {slides[currentSlide].cta}
                     <ArrowRight className="w-4 h-4" />
                   </button>
@@ -152,7 +151,7 @@ function Home() {
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-4">
               <button
                 onClick={prevSlide}
-                className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/30 transition-colors"
+                className="w-10 h-10 rounded-full  backdrop-blur-sm flex items-center justify-center  transition-colors"
                 aria-label="Previous slide"
               >
                 <ChevronLeft className="w-5 h-5 text-white" />
@@ -166,8 +165,8 @@ function Home() {
                     onClick={() => setCurrentSlide(index)}
                     className={`w-2 h-2 rounded-full transition-all ${
                       index === currentSlide
-                        ? 'bg-white w-6'
-                        : 'bg-white/50 hover:bg-white/70'
+                        ? ' w-6'
+                        : ' '
                     }`}
                     aria-label={`Go to slide ${index + 1}`}
                   />
@@ -176,7 +175,7 @@ function Home() {
 
               <button
                 onClick={nextSlide}
-                className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/30 transition-colors"
+                className="w-10 h-10 rounded-full  backdrop-blur-sm flex items-center justify-center  transition-colors"
                 aria-label="Next slide"
               >
                 <ChevronRight className="w-5 h-5 text-white" />
@@ -231,10 +230,6 @@ function Home() {
             </button>
           </div>
 
-          {/* Operators Grid - Optimized for mobile */}
-        <QueryClientProvider client={queryClient}>
-          <OperatorList countryId={null} />
-        </QueryClientProvider>
         </section>
 
         {/* Promo Banner */}
@@ -255,7 +250,7 @@ function Home() {
                   Use code: WELCOME20 at checkout
                 </p>
               </div>
-              <button className="bg-white text-indigo-600 font-semibold px-6 py-3 rounded-xl hover:bg-gray-100 active:scale-95 transition-all whitespace-nowrap">
+              <button className=" text-indigo-600 font-semibold px-6 py-3 rounded-xl hover:bg-gray-100 active:scale-95 transition-all whitespace-nowrap">
                 Claim Offer
               </button>
             </div>
@@ -264,19 +259,19 @@ function Home() {
 
         {/* Quick Stats */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl p-4 border border-gray-200">
+          <div className="rounded-xl p-4 border border-gray-200">
             <div className="text-2xl font-bold text-gray-900 mb-1">50+</div>
             <div className="text-sm text-gray-600">Operators</div>
           </div>
-          <div className="bg-white rounded-xl p-4 border border-gray-200">
+          <div className="rounded-xl p-4 border border-gray-200">
             <div className="text-2xl font-bold text-gray-900 mb-1">1000+</div>
             <div className="text-sm text-gray-600">Plans</div>
           </div>
-          <div className="bg-white rounded-xl p-4 border border-gray-200">
+          <div className="rounded-xl p-4 border border-gray-200">
             <div className="text-2xl font-bold text-gray-900 mb-1">24/7</div>
             <div className="text-sm text-gray-600">Support</div>
           </div>
-          <div className="bg-white rounded-xl p-4 border border-gray-200">
+          <div className="rounded-xl p-4 border border-gray-200">
             <div className="text-2xl font-bold text-gray-900 mb-1">10K+</div>
             <div className="text-sm text-gray-600">Users</div>
           </div>

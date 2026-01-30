@@ -8,6 +8,8 @@ interface ImageOptions {
   placeholder?: boolean;
 }
 
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
 class ImageService {
   private cache = new Map<string, string>();
 
@@ -76,13 +78,13 @@ class ImageService {
   }
 
   private buildCloudinaryUrl(imagePath: string, options: ImageOptions): string {
-    return `https://res.cloudinary.com/your-app/image/fetch/w_${options.width},h_${options.height},q_${options.quality},f_${options.format}/${encodeURIComponent(`https://coupon-finalz.ddev.site/dashboard${imagePath}`)}`;
+    return `https://res.cloudinary.com/your-app/image/fetch/w_${options.width},h_${options.height},q_${options.quality},f_${options.format}/${encodeURIComponent(`${backendUrl}/dashboard${imagePath}`)}`;
   }
 
   private buildLaravelUrl(imagePath: string): string {
     const isTauri =
       typeof window !== 'undefined' && (window as any).__TAURI__ !== undefined;
-    return isTauri ? `https://coupon-finalz.ddev.site/dashboard${imagePath}` : imagePath;
+    return isTauri ? `${backendUrl}/dashboard${imagePath}` : imagePath;
   }
 
   private getPlaceholder(width: number, height: number): string {

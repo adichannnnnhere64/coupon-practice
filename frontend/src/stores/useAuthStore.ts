@@ -2,8 +2,10 @@
 import axios from 'axios';
 import { create } from 'zustand';
 
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
 const api = axios.create({
-  baseURL: 'https://coupon-finalz.ddev.site/api/v1', // ✅ API-only base URL
+  baseURL: `${backendUrl}/api/v1`, // ✅ API-only base URL
 });
 
 interface AuthState {
@@ -30,7 +32,7 @@ export const useAuthStore = create<AuthState>(set => ({
   login: async (email: string, password: string) => {
     try {
       const response = await api.post('/login', { email, password });
-            const { user, token } = response.data;
+            const { user, token } = response.data.data;
 
       // ✅ Store token
       localStorage.setItem('auth_token', token);

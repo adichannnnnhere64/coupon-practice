@@ -1,7 +1,6 @@
 // src/routes/dashboard.tsx
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { OperatorList } from '../../components/Operator/OperatorList';
 
 export const Route = createFileRoute('/_authenticated/dashboard')({
   beforeLoad: () => {

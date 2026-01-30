@@ -1,11 +1,10 @@
-// frontend/src/lib/api-client.ts
 import axios from 'axios';
 import type { AxiosInstance, AxiosRequestConfig } from 'axios';
 
 export interface CouponImage {
   id: number;
-  url: string; // /storage/1/01KB51R6EC9H7ZBH65KAB90VRK.png
-  thumbnail: string; // /storage/1/conversions/01KB51R6EC9H7ZBH65KAB90VRK-thumbnail.jpg
+  url: string;
+  thumbnail: string;
   name: string;
 }
 
@@ -131,6 +130,8 @@ export interface PaginatedResponse<T> {
   };
 }
 
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
 class ApiClient {
   private client: AxiosInstance;
   private isTauri: boolean;
@@ -151,9 +152,9 @@ class ApiClient {
 
   private getBaseUrl(): string {
     if (this.isTauri) {
-      return 'https://coupon-finalz.ddev.site/api/v1';
+      return `${backendUrl}/api/v1`;
     }
-    return 'https://coupon-finalz.ddev.site/api/v1';
+    return `${backendUrl}/api/v1`;
   }
 
   private setupInterceptors() {
@@ -245,7 +246,7 @@ export function getImageUrl(
     (window as any).__TAURI__.platform !== undefined;
   console.log(`🔍 getImageUrl - isTauri: ${isTauri}, Path: "${cleanPath}"`);
   if (isTauri) {
-    return `https://coupon-finalz.ddev.site/dashboard${cleanPath}`;
+    return `${backendUrl}/dashboard${cleanPath}`;
   }
   // Web: Relative path
   return cleanPath;
@@ -272,7 +273,6 @@ export function getCouponImage(coupon: Coupon | null | undefined): string {
   return finalUrl;
 }
 
-// ✅ Fetch single coupon
 export async function fetchPlanById(id: number): Promise<Coupon | null> {
   try {
     const response = await apiClient.get<{ data: Coupon }>(`/plans/${id}`);
@@ -287,8 +287,7 @@ export async function fetchPlanById(id: number): Promise<Coupon | null> {
   }
 }
 
-// ✅ NEW: Fetch operators by country
-export async function fetchOperatorsByCountry(
+export async function fetchOperators(
   countryId: number
 ): Promise<PaginatedResponse<Operator>> {
   try {
@@ -319,27 +318,11 @@ export async function fetchOperatorById(id: number): Promise<Operator | null> {
   }
 }
 
-// ✅ NEW: Fetch popular operators
-export async function fetchPopularOperators(
-  limit = 12
-): Promise<PaginatedResponse<Operator>> {
-  try {
-    const response = await apiClient.get<PaginatedResponse<Operator>>(
-      `/plan-types?limit=${limit}`
-    );
-    return response;
-  } catch (error) {
-    console.error('fetchPopularOperators error:', error);
-    throw error;
-  }
-}
-
-// ✅ NEW: Fetch plan types for operator (if needed as standalone)
 export async function fetchPlanTypesForOperator(
   operatorId: number
-): Promise<PaginatedResponse<PlanType>> {
+): Promise<PaginatedResponse<Plan>> {
   try {
-    const response = await apiClient.get<PaginatedResponse<PlanType>>(
+    const response = await apiClient.get<PaginatedResponse<Plan>>(
       `/operators/${operatorId}/plan-types`
     );
     return response;
@@ -349,25 +332,6 @@ export async function fetchPlanTypesForOperator(
   }
 }
 
-// ✅ Updated fetchCoupons with filters
-export async function fetchCoupons(
-  page: number = 1,
-  filters?: {
-    operator_id?: number;
-    plan_type_id?: number;
-    search?: string;
-  }
-): Promise<PaginatedResponse<Coupon>> {
-  const params = new URLSearchParams({ page: page.toString() });
-  if (filters) {
-    if (filters.operator_id) params.append('operator_id', filters.operator_id.toString());
-    if (filters.plan_type_id) params.append('plan_type_id', filters.plan_type_id.toString());
-    if (filters.search) params.append('search', filters.search);
-  }
-  return apiClient.get<PaginatedResponse<Coupon>>(`/coupons?${params.toString()}`);
-}
-
-// ✅ Also add error handling utility
 export async function apiRequest<T>(
   url: string,
   options: RequestInit = {}
@@ -398,10 +362,8 @@ export const api = {
   post: apiClient.post.bind(apiClient),
   put: apiClient.put.bind(apiClient),
   delete: apiClient.delete.bind(apiClient),
-  fetchCoupons,
-  fetchOperatorsByCountry,
+  fetchOperators,
   fetchOperatorById,
-  fetchPopularOperators,
   fetchPlanTypesForOperator,
 };
 

@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingRouteImport } from './routes/setting'
-import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PublicRouteImport } from './routes/_public'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
@@ -18,20 +17,10 @@ import { Route as PublicRegisterRouteImport } from './routes/_public/register'
 import { Route as PublicLoginRouteImport } from './routes/_public/login'
 import { Route as AuthenticatedSuccessRouteImport } from './routes/_authenticated/success'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as AuthenticatedOperatorIndexRouteImport } from './routes/_authenticated/operator/index'
-import { Route as AuthenticatedCheckoutIndexRouteImport } from './routes/_authenticated/checkout/index'
-import { Route as AuthenticatedOperatorIdRouteRouteImport } from './routes/_authenticated/operator/$id/route'
-import { Route as AuthenticatedOperatorIdPlanRouteRouteImport } from './routes/_authenticated/operator/$id/plan/route'
-import { Route as AuthenticatedOperatorIdPlanIdRouteImport } from './routes/_authenticated/operator/$id/plan/$id'
 
 const SettingRoute = SettingRouteImport.update({
   id: '/setting',
   path: '/setting',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProfileRoute = ProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PublicRoute = PublicRouteImport.update({
@@ -67,133 +56,60 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedOperatorIndexRoute =
-  AuthenticatedOperatorIndexRouteImport.update({
-    id: '/operator/',
-    path: '/operator/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedCheckoutIndexRoute =
-  AuthenticatedCheckoutIndexRouteImport.update({
-    id: '/checkout/',
-    path: '/checkout/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedOperatorIdRouteRoute =
-  AuthenticatedOperatorIdRouteRouteImport.update({
-    id: '/operator/$id',
-    path: '/operator/$id',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedOperatorIdPlanRouteRoute =
-  AuthenticatedOperatorIdPlanRouteRouteImport.update({
-    id: '/plan',
-    path: '/plan',
-    getParentRoute: () => AuthenticatedOperatorIdRouteRoute,
-  } as any)
-const AuthenticatedOperatorIdPlanIdRoute =
-  AuthenticatedOperatorIdPlanIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
-    getParentRoute: () => AuthenticatedOperatorIdPlanRouteRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
-  '/profile': typeof ProfileRoute
   '/setting': typeof SettingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/success': typeof AuthenticatedSuccessRoute
   '/login': typeof PublicLoginRoute
   '/register': typeof PublicRegisterRoute
   '/': typeof AuthenticatedIndexRoute
-  '/operator/$id': typeof AuthenticatedOperatorIdRouteRouteWithChildren
-  '/checkout': typeof AuthenticatedCheckoutIndexRoute
-  '/operator': typeof AuthenticatedOperatorIndexRoute
-  '/operator/$id/plan': typeof AuthenticatedOperatorIdPlanRouteRouteWithChildren
-  '/operator/$id/plan/$id': typeof AuthenticatedOperatorIdPlanIdRoute
 }
 export interface FileRoutesByTo {
-  '/profile': typeof ProfileRoute
   '/setting': typeof SettingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/success': typeof AuthenticatedSuccessRoute
   '/login': typeof PublicLoginRoute
   '/register': typeof PublicRegisterRoute
   '/': typeof AuthenticatedIndexRoute
-  '/operator/$id': typeof AuthenticatedOperatorIdRouteRouteWithChildren
-  '/checkout': typeof AuthenticatedCheckoutIndexRoute
-  '/operator': typeof AuthenticatedOperatorIndexRoute
-  '/operator/$id/plan': typeof AuthenticatedOperatorIdPlanRouteRouteWithChildren
-  '/operator/$id/plan/$id': typeof AuthenticatedOperatorIdPlanIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/_public': typeof PublicRouteWithChildren
-  '/profile': typeof ProfileRoute
   '/setting': typeof SettingRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/success': typeof AuthenticatedSuccessRoute
   '/_public/login': typeof PublicLoginRoute
   '/_public/register': typeof PublicRegisterRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
-  '/_authenticated/operator/$id': typeof AuthenticatedOperatorIdRouteRouteWithChildren
-  '/_authenticated/checkout/': typeof AuthenticatedCheckoutIndexRoute
-  '/_authenticated/operator/': typeof AuthenticatedOperatorIndexRoute
-  '/_authenticated/operator/$id/plan': typeof AuthenticatedOperatorIdPlanRouteRouteWithChildren
-  '/_authenticated/operator/$id/plan/$id': typeof AuthenticatedOperatorIdPlanIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/profile'
     | '/setting'
     | '/dashboard'
     | '/success'
     | '/login'
     | '/register'
     | '/'
-    | '/operator/$id'
-    | '/checkout'
-    | '/operator'
-    | '/operator/$id/plan'
-    | '/operator/$id/plan/$id'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/profile'
-    | '/setting'
-    | '/dashboard'
-    | '/success'
-    | '/login'
-    | '/register'
-    | '/'
-    | '/operator/$id'
-    | '/checkout'
-    | '/operator'
-    | '/operator/$id/plan'
-    | '/operator/$id/plan/$id'
+  to: '/setting' | '/dashboard' | '/success' | '/login' | '/register' | '/'
   id:
     | '__root__'
     | '/_authenticated'
     | '/_public'
-    | '/profile'
     | '/setting'
     | '/_authenticated/dashboard'
     | '/_authenticated/success'
     | '/_public/login'
     | '/_public/register'
     | '/_authenticated/'
-    | '/_authenticated/operator/$id'
-    | '/_authenticated/checkout/'
-    | '/_authenticated/operator/'
-    | '/_authenticated/operator/$id/plan'
-    | '/_authenticated/operator/$id/plan/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   PublicRoute: typeof PublicRouteWithChildren
-  ProfileRoute: typeof ProfileRoute
   SettingRoute: typeof SettingRoute
 }
 
@@ -204,13 +120,6 @@ declare module '@tanstack/react-router' {
       path: '/setting'
       fullPath: '/setting'
       preLoaderRoute: typeof SettingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profile': {
-      id: '/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_public': {
@@ -262,90 +171,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/operator/': {
-      id: '/_authenticated/operator/'
-      path: '/operator'
-      fullPath: '/operator'
-      preLoaderRoute: typeof AuthenticatedOperatorIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/checkout/': {
-      id: '/_authenticated/checkout/'
-      path: '/checkout'
-      fullPath: '/checkout'
-      preLoaderRoute: typeof AuthenticatedCheckoutIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/operator/$id': {
-      id: '/_authenticated/operator/$id'
-      path: '/operator/$id'
-      fullPath: '/operator/$id'
-      preLoaderRoute: typeof AuthenticatedOperatorIdRouteRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/operator/$id/plan': {
-      id: '/_authenticated/operator/$id/plan'
-      path: '/plan'
-      fullPath: '/operator/$id/plan'
-      preLoaderRoute: typeof AuthenticatedOperatorIdPlanRouteRouteImport
-      parentRoute: typeof AuthenticatedOperatorIdRouteRoute
-    }
-    '/_authenticated/operator/$id/plan/$id': {
-      id: '/_authenticated/operator/$id/plan/$id'
-      path: '/$id'
-      fullPath: '/operator/$id/plan/$id'
-      preLoaderRoute: typeof AuthenticatedOperatorIdPlanIdRouteImport
-      parentRoute: typeof AuthenticatedOperatorIdPlanRouteRoute
-    }
   }
 }
-
-interface AuthenticatedOperatorIdPlanRouteRouteChildren {
-  AuthenticatedOperatorIdPlanIdRoute: typeof AuthenticatedOperatorIdPlanIdRoute
-}
-
-const AuthenticatedOperatorIdPlanRouteRouteChildren: AuthenticatedOperatorIdPlanRouteRouteChildren =
-  {
-    AuthenticatedOperatorIdPlanIdRoute: AuthenticatedOperatorIdPlanIdRoute,
-  }
-
-const AuthenticatedOperatorIdPlanRouteRouteWithChildren =
-  AuthenticatedOperatorIdPlanRouteRoute._addFileChildren(
-    AuthenticatedOperatorIdPlanRouteRouteChildren,
-  )
-
-interface AuthenticatedOperatorIdRouteRouteChildren {
-  AuthenticatedOperatorIdPlanRouteRoute: typeof AuthenticatedOperatorIdPlanRouteRouteWithChildren
-}
-
-const AuthenticatedOperatorIdRouteRouteChildren: AuthenticatedOperatorIdRouteRouteChildren =
-  {
-    AuthenticatedOperatorIdPlanRouteRoute:
-      AuthenticatedOperatorIdPlanRouteRouteWithChildren,
-  }
-
-const AuthenticatedOperatorIdRouteRouteWithChildren =
-  AuthenticatedOperatorIdRouteRoute._addFileChildren(
-    AuthenticatedOperatorIdRouteRouteChildren,
-  )
 
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedSuccessRoute: typeof AuthenticatedSuccessRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
-  AuthenticatedOperatorIdRouteRoute: typeof AuthenticatedOperatorIdRouteRouteWithChildren
-  AuthenticatedCheckoutIndexRoute: typeof AuthenticatedCheckoutIndexRoute
-  AuthenticatedOperatorIndexRoute: typeof AuthenticatedOperatorIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedSuccessRoute: AuthenticatedSuccessRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
-  AuthenticatedOperatorIdRouteRoute:
-    AuthenticatedOperatorIdRouteRouteWithChildren,
-  AuthenticatedCheckoutIndexRoute: AuthenticatedCheckoutIndexRoute,
-  AuthenticatedOperatorIndexRoute: AuthenticatedOperatorIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -368,7 +206,6 @@ const PublicRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   PublicRoute: PublicRouteWithChildren,
-  ProfileRoute: ProfileRoute,
   SettingRoute: SettingRoute,
 }
 export const routeTree = rootRouteImport

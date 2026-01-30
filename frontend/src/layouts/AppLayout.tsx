@@ -40,9 +40,6 @@ function UserDropdown() {
         <li>
           <Link to="/">Store</Link>
         </li>
-        <li>
-          <Link to="/profile">Profile</Link>
-        </li>
         <li className="border-t border-base-300 mt-2 pt-2">
           <button onClick={handleLogout} className="text-error flex gap-2">
             <LogOut className="w-4" /> Logout
