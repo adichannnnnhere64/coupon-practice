@@ -24,6 +24,7 @@ class PlanTypeForm
                 Toggle::make('is_active')
                     ->required(),
                 SpatieMediaLibraryFileUpload::make('image')
+                    ->disk('public')
                     ->collection('images'),
 
             ]);
