@@ -17,7 +17,8 @@
         "spatie/laravel-data": "^4.0",
         "spatie/laravel-medialibrary": "^11.17",
         "spatie/laravel-query-builder": "^6.0",
-        "adichan/wallet" : "dev-master"
+        "adichan/wallet" : "dev-master",
+        "adichan/payment" : "*"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -84,6 +85,6 @@
             "url": "./external-packages/wallet"
         }
     ],
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "prefer-stable": true
 }
