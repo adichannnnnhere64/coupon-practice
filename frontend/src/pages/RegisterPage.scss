@@ -1,0 +1,472 @@
+.register-page {
+  --background: linear-gradient(135deg, var(--ion-color-primary-tint), var(--ion-color-secondary-tint));
+
+  ion-content {
+    --background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+  }
+
+  // SIMPLIFIED GRID - REMOVE ALL COMPLEX OVERRIDES
+  ion-grid.register-grid {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0;
+    
+    ion-row {
+      justify-content: center;
+      margin: 0;
+      padding: 0;
+    }
+    
+    // Let Ionic handle the column sizing naturally
+    ion-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0;
+    }
+  }
+
+  // Logo Section - Consistent with Login
+  .logo-section {
+    margin-bottom: 30px;
+    width: 100%;
+    max-width: 450px;
+    text-align: center;
+
+    .logo-circle {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
+
+      .logo-icon {
+        font-size: 50px;
+        color: var(--ion-color-primary);
+      }
+    }
+
+    .app-title {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: white;
+      margin: 0 0 8px;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      line-height: 1.2;
+    }
+
+    .app-subtitle {
+      font-size: 1rem;
+      color: rgba(255, 255, 255, 0.95);
+      margin: 0;
+    }
+  }
+
+  // Register Card - Consistent with Login
+  .register-card {
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.18);
+    border-radius: 20px;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 450px;
+    background: white;
+    overflow: hidden;
+
+    ion-card-header {
+      padding: 25px 25px 15px;
+      background: var(--ion-color-light);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+      ion-card-title {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--ion-color-dark);
+        text-align: center;
+        margin: 0;
+      }
+    }
+
+    ion-card-content {
+      padding: 25px;
+    }
+  }
+
+  // Input Items - Consistent with Login
+  .input-item {
+    --background: white;
+    --border-radius: 12px;
+    --padding-start: 15px;
+    --inner-padding-end: 15px;
+    margin-bottom: 15px;
+    border: 2px solid var(--ion-color-light-shade);
+    transition: all 0.3s ease;
+    min-height: 55px;
+    background: white;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+
+    &:focus-within {
+      border-color: var(--ion-color-primary);
+      box-shadow: 0 5px 15px rgba(var(--ion-color-primary-rgb), 0.15);
+      transform: translateY(-2px);
+    }
+
+    &.ion-invalid {
+      border-color: var(--ion-color-danger);
+
+      &:focus-within {
+        box-shadow: 0 5px 15px rgba(var(--ion-color-danger-rgb), 0.15);
+      }
+    }
+
+    ion-icon {
+      margin-right: 10px;
+      font-size: 1.2rem;
+      color: var(--ion-color-medium);
+    }
+
+    ion-input {
+      --padding-start: 0;
+      font-size: 1rem;
+      color: var(--ion-color-dark);
+      
+      &::placeholder {
+        color: var(--ion-color-medium);
+      }
+    }
+
+    ion-button {
+      margin: 0;
+      padding: 0;
+      height: auto;
+    }
+  }
+
+  .error-text {
+    display: block;
+    margin: -8px 0 12px 15px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--ion-color-danger);
+  }
+
+  // Password Strength
+  .password-strength {
+    margin: -8px 0 15px;
+
+    .strength-bar {
+      height: 4px;
+      background: var(--ion-color-light-shade);
+      border-radius: 2px;
+      margin-bottom: 4px;
+      overflow: hidden;
+
+      .strength-fill {
+        height: 100%;
+        border-radius: 2px;
+        transition: width 0.3s ease;
+      }
+    }
+
+    .strength-bar.strength-weak .strength-fill {
+      width: 33%;
+      background: var(--ion-color-danger);
+    }
+
+    .strength-bar.strength-medium .strength-fill {
+      width: 66%;
+      background: var(--ion-color-warning);
+    }
+
+    .strength-bar.strength-strong .strength-fill {
+      width: 100%;
+      background: var(--ion-color-success);
+    }
+
+    ion-text {
+      small {
+        color: var(--ion-color-medium);
+        
+        .strength-label-weak {
+          color: var(--ion-color-danger);
+          font-weight: 600;
+        }
+        
+        .strength-label-medium {
+          color: var(--ion-color-warning);
+          font-weight: 600;
+        }
+        
+        .strength-label-strong {
+          color: var(--ion-color-success);
+          font-weight: 600;
+        }
+      }
+    }
+  }
+
+  // Terms Checkbox - Clean and simple
+  .terms-checkbox {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 20px 0;
+
+    ion-checkbox {
+      --size: 18px;
+      --border-radius: 4px;
+      --border-color: var(--ion-color-medium);
+      --border-color-checked: var(--ion-color-primary);
+      --background-checked: var(--ion-color-primary);
+      --checkmark-color: white;
+      margin-top: 2px;
+    }
+
+    ion-text {
+      font-size: 0.85rem;
+      color: var(--ion-color-medium);
+
+      a {
+        color: var(--ion-color-primary);
+        font-weight: 600;
+        text-decoration: none;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+    }
+  }
+
+  // Register Button - Consistent with Login
+  .register-button {
+    --border-radius: 12px;
+    --box-shadow: 0 6px 20px rgba(var(--ion-color-primary-rgb), 0.3);
+    height: 55px;
+    font-weight: 600;
+    font-size: 1rem;
+    margin-top: 15px;
+    text-transform: none;
+    letter-spacing: normal;
+    transition: all 0.3s ease;
+
+    &:hover:not([disabled]) {
+      --box-shadow: 0 8px 25px rgba(var(--ion-color-primary-rgb), 0.4);
+      transform: translateY(-2px);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+    }
+  }
+
+  // Divider
+  .divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: var(--ion-color-medium);
+    margin: 25px 0 20px;
+    position: relative;
+
+    &::before,
+    &::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid var(--ion-color-light-shade);
+    }
+
+    span {
+      padding: 0 15px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      background: white;
+      position: relative;
+      z-index: 1;
+    }
+  }
+
+  // Login link
+  .login-link {
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--ion-color-medium);
+
+    ion-button {
+      --padding-start: 4px;
+      --padding-end: 4px;
+      margin: 0;
+      height: auto;
+      font-weight: 600;
+      text-transform: none;
+      vertical-align: baseline;
+      font-size: 0.9rem;
+    }
+  }
+}
+
+// Desktop Styles
+@media (min-width: 768px) {
+  .register-page {
+    ion-grid.register-grid {
+      padding: 60px 40px;
+    }
+
+    .logo-section {
+      margin-bottom: 40px;
+      max-width: 500px;
+
+      .logo-circle {
+        width: 120px;
+        height: 120px;
+        margin-bottom: 25px;
+
+        .logo-icon {
+          font-size: 60px;
+        }
+      }
+
+      .app-title {
+        font-size: 2.2rem;
+      }
+
+      .app-subtitle {
+        font-size: 1.1rem;
+      }
+    }
+
+    .register-card {
+      max-width: 500px;
+      border-radius: 24px;
+
+      ion-card-header {
+        padding: 30px 30px 20px;
+
+        ion-card-title {
+          font-size: 1.8rem;
+        }
+      }
+
+      ion-card-content {
+        padding: 30px;
+      }
+    }
+
+    .input-item {
+      min-height: 60px;
+      --border-radius: 14px;
+      margin-bottom: 20px;
+
+      ion-icon {
+        font-size: 1.3rem;
+        margin-right: 15px;
+      }
+
+      ion-input {
+        font-size: 1.05rem;
+      }
+    }
+
+    .register-button {
+      height: 60px;
+      font-size: 1.1rem;
+      margin-top: 20px;
+      --border-radius: 14px;
+    }
+
+    .divider {
+      margin: 30px 0 25px;
+    }
+  }
+}
+
+// Mobile Adjustments
+@media (max-width: 767px) {
+  .register-page {
+    ion-grid.register-grid {
+      padding: 20px 15px;
+      min-height: calc(100vh - 56px);
+      
+      ion-col {
+        padding: 0 15px;
+      }
+    }
+
+    .logo-section {
+      max-width: 320px;
+      margin-bottom: 25px;
+
+      .logo-circle {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 15px;
+
+        .logo-icon {
+          font-size: 40px;
+        }
+      }
+
+      .app-title {
+        font-size: 1.6rem;
+      }
+
+      .app-subtitle {
+        font-size: 0.9rem;
+      }
+    }
+
+    .register-card {
+      max-width: 100%;
+      border-radius: 16px;
+
+      ion-card-header {
+        padding: 20px 20px 10px;
+
+        ion-card-title {
+          font-size: 1.4rem;
+        }
+      }
+
+      ion-card-content {
+        padding: 20px;
+      }
+    }
+
+    .input-item {
+      min-height: 50px;
+      --border-radius: 10px;
+      margin-bottom: 12px;
+
+      ion-icon {
+        font-size: 1rem;
+        margin-right: 8px;
+      }
+
+      ion-input {
+        font-size: 0.95rem;
+      }
+    }
+
+    .register-button {
+      height: 50px;
+      font-size: 0.95rem;
+      --border-radius: 10px;
+    }
+
+    .terms-checkbox {
+      margin: 15px 0;
+    }
+
+    .divider {
+      margin: 20px 0 15px;
+    }
+  }
+}

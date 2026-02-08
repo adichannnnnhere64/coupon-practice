@@ -18,7 +18,7 @@
         "spatie/laravel-medialibrary": "^11.17",
         "spatie/laravel-query-builder": "^6.0",
         "adichan/wallet" : "dev-master",
-        "adichan/payment" : "*"
+        "adichan/payment" : "dev-master"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

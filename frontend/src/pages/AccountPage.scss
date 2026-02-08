@@ -1,0 +1,148 @@
+.account-page {
+  .profile-header {
+    background: linear-gradient(135deg, var(--ion-color-primary), var(--ion-color-secondary));
+    color: white;
+    
+    .profile-info {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      
+      .avatar-container {
+        position: relative;
+        
+        .profile-avatar {
+          width: 80px;
+          height: 80px;
+          background: rgba(255, 255, 255, 0.2);
+          
+          ion-icon {
+            font-size: 80px;
+          }
+        }
+        
+        .change-photo-btn {
+          position: absolute;
+          bottom: 0;
+          right: 0;
+          --background: white;
+          --border-radius: 50%;
+          width: 32px;
+          height: 32px;
+          
+          ion-icon {
+            color: var(--ion-color-primary);
+          }
+        }
+      }
+      
+      .profile-details {
+        h2 {
+          margin: 0 0 5px 0;
+          font-size: 1.5rem;
+        }
+        
+        p {
+          margin: 0 0 5px 0;
+          opacity: 0.9;
+        }
+        
+        ion-text {
+          font-size: 0.9rem;
+        }
+      }
+    }
+  }
+  
+  .stats-overview {
+    background: white;
+    
+    .stat-card {
+      text-align: center;
+      padding: 15px;
+      background: var(--ion-color-light);
+      border-radius: 12px;
+      height: 100%;
+      
+      .stat-icon {
+        font-size: 24px;
+        margin-bottom: 10px;
+      }
+      
+      .stat-content {
+        h3 {
+          margin: 0 0 5px 0;
+          font-size: 1.3rem;
+          font-weight: bold;
+          color: var(--ion-color-dark);
+        }
+        
+        p {
+          margin: 0;
+          font-size: 0.85rem;
+          color: var(--ion-color-medium);
+        }
+      }
+    }
+  }
+  
+  .profile-form-card {
+    margin: 16px;
+    
+    ion-list {
+      ion-item {
+        --padding-start: 0;
+        --inner-padding-end: 0;
+        margin-bottom: 20px;
+        
+        &:last-child {
+          margin-bottom: 0;
+        }
+        
+        ion-icon {
+          margin-right: 10px;
+        }
+      }
+    }
+    
+    ion-button {
+      margin-top: 20px;
+    }
+  }
+  
+  .danger-zone {
+    margin: 16px;
+    border: 2px solid var(--ion-color-danger);
+    
+    ion-card-header {
+      background: rgba(var(--ion-color-danger-rgb), 0.1);
+    }
+    
+    .delete-account {
+      text-align: center;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--ion-color-light);
+      
+      p {
+        margin: 0 0 10px 0;
+        color: var(--ion-color-medium);
+        font-size: 0.9rem;
+      }
+    }
+  }
+}
+
+@media (min-width: 768px) {
+  .account-page {
+    .profile-form-card {
+      max-width: 600px;
+      margin: 16px auto;
+    }
+    
+    .danger-zone {
+      max-width: 600px;
+      margin: 16px auto;
+    }
+  }
+}

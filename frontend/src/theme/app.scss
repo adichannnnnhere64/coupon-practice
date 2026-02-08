@@ -1,0 +1,17 @@
+html {
+  --ion-dynamic-font: var(--ion-default-dynamic-font);
+  --ion-font-family: 'Tauri', sans-serif;
+}
+
+ion-tab-button.tab-selected {
+  color: var(--ion-color-secondary);
+}
+
+ion-tab-button.tab-selected ion-icon {
+  transform: scale(1.2);
+}
+
+ion-tab-button.tab-selected ion-label {
+  font-weight: 600;
+}
+

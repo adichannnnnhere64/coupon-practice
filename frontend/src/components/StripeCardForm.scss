@@ -1,0 +1,100 @@
+// components/PaymentMethodComponent.scss
+.payment-method-item {
+  --inner-padding-end: 8px;
+  --padding-start: 16px;
+  
+  ion-label {
+    margin: 8px 0;
+  }
+}
+
+.method-brand {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--ion-color-dark);
+}
+
+.method-details {
+  font-size: 14px;
+  color: var(--ion-color-medium);
+  margin: 4px 0;
+}
+
+.default-badge {
+  display: inline-block;
+  background: var(--ion-color-success-tint);
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-top: 4px;
+}
+
+.no-methods {
+  text-align: center;
+  padding: 32px 16px;
+  
+  ion-icon {
+    margin-bottom: 16px;
+  }
+  
+  p {
+    color: var(--ion-color-medium);
+    margin: 0;
+  }
+}
+
+.add-button {
+  margin-top: 16px;
+}
+
+.add-form-container {
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid var(--ion-color-light);
+  border-radius: 12px;
+  background: var(--ion-color-light-tint);
+
+  .form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    
+    h3 {
+      margin: 0;
+      color: var(--ion-color-dark);
+    }
+  }
+}
+
+.security-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--ion-color-success-tint);
+  border-radius: 8px;
+  
+  ion-icon {
+    flex-shrink: 0;
+  }
+  
+  small {
+    color: var(--ion-color-medium);
+  }
+}
+
+.error-message {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background: var(--ion-color-danger-tint);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 40px;
+}

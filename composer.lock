@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "bd57ea3a91ee733e203dab8547814114",
+    "content-hash": "5ade7d1d4aa9383f051fb46fbebc8bbf",
     "packages": [
         {
             "name": "adichan/payment",
@@ -13189,6 +13189,7 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
+        "adichan/payment": 20,
         "adichan/wallet": 20
     },
     "prefer-stable": true,
@@ -13197,5 +13198,5 @@
         "php": "^8.3"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.6.0"
+    "plugin-api-version": "2.9.0"
 }

@@ -1,0 +1,299 @@
+.product-page {
+  .product-gallery {
+    position: relative;
+    
+    .main-image {
+      height: 300px;
+      background: linear-gradient(135deg, var(--ion-color-light), #f0f0f0);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      
+      .product-icon-large {
+        font-size: 120px;
+        color: var(--ion-color-medium);
+      }
+      
+      .product-tag {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        z-index: 10;
+      }
+    }
+  }
+  
+  .product-info {
+    .product-header {
+      margin-bottom: 20px;
+      
+      .product-title {
+        margin: 10px 0 5px;
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: var(--ion-color-dark);
+      }
+      
+      .product-rating {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin-top: 5px;
+        
+        .star-icon {
+          font-size: 16px;
+        }
+        
+        .rating-text {
+          font-size: 0.9rem;
+          margin-left: 8px;
+          color: var(--ion-color-medium);
+        }
+      }
+    }
+    
+    .product-description {
+      color: var(--ion-color-medium);
+      line-height: 1.6;
+      margin: 15px 0 25px;
+    }
+
+    .features-grid {
+      background: var(--ion-color-light);
+      border-radius: 12px;
+      padding: 15px 0;
+      margin: 20px 0;
+
+      .feature-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+
+        ion-icon {
+          font-size: 32px;
+        }
+
+        small {
+          font-size: 0.85rem;
+          font-weight: 500;
+        }
+      }
+    }
+
+    .plans-section {
+      margin-top: 30px;
+
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+
+        h2 {
+          margin: 0;
+          font-size: 1.3rem;
+          font-weight: 600;
+        }
+      }
+
+      .plans-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+
+        .plan-card {
+          margin: 0;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          transition: all 0.3s ease;
+
+          &:hover:not(.inactive-plan) {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+          }
+
+          &.inactive-plan {
+            opacity: 0.5;
+            cursor: not-allowed;
+          }
+
+          .plan-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+
+            .plan-name {
+              font-size: 1.1rem;
+              font-weight: 600;
+              margin-bottom: 4px;
+            }
+
+            .discount-badge {
+              flex-shrink: 0;
+              font-size: 0.75rem;
+              font-weight: bold;
+              padding: 4px 8px;
+            }
+          }
+
+          .plan-pricing-section {
+            .pricing-discounted {
+              display: flex;
+              flex-direction: column;
+              gap: 5px;
+              margin-bottom: 15px;
+
+              .original-price {
+                font-size: 0.95rem;
+                color: var(--ion-color-medium);
+                text-decoration: line-through;
+              }
+
+              .current-price {
+                font-size: 2rem;
+                font-weight: bold;
+                color: var(--ion-color-danger);
+                line-height: 1;
+              }
+
+              .savings {
+                margin-top: 2px;
+                font-weight: 500;
+              }
+            }
+
+            .pricing-regular {
+              margin-bottom: 15px;
+
+              .current-price {
+                font-size: 2rem;
+                font-weight: bold;
+                color: var(--ion-color-primary);
+                line-height: 1;
+              }
+            }
+
+            .select-plan-btn {
+              margin-top: 10px;
+              font-weight: 600;
+            }
+          }
+
+          .plan-metadata {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--ion-color-light);
+
+            ion-icon {
+              vertical-align: middle;
+              margin-right: 4px;
+              font-size: 14px;
+            }
+          }
+        }
+      }
+    }
+
+    .info-card {
+      background: var(--ion-color-light);
+      box-shadow: none;
+
+      .info-title {
+        margin: 0 0 20px;
+        font-size: 1.1rem;
+        font-weight: 600;
+      }
+
+      .info-list {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+
+        .info-item {
+          display: flex;
+          gap: 15px;
+          align-items: flex-start;
+
+          ion-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+            margin-top: 2px;
+          }
+
+          div {
+            flex: 1;
+
+            strong {
+              display: block;
+              margin-bottom: 4px;
+              color: var(--ion-color-dark);
+            }
+
+            p {
+              margin: 0;
+              color: var(--ion-color-medium);
+              font-size: 0.9rem;
+              line-height: 1.4;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Desktop styles
+@media (min-width: 768px) {
+  .product-page {
+    .product-gallery {
+      .main-image {
+        height: 400px;
+        
+        .product-icon-large {
+          font-size: 160px;
+        }
+      }
+    }
+    
+    .product-info {
+      max-width: 900px;
+      margin: 0 auto;
+      
+      .product-header {
+        .product-title {
+          font-size: 2rem;
+        }
+      }
+
+      .plans-section {
+        .plans-list {
+          .plan-card {
+            .plan-pricing-section {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+
+              .pricing-discounted,
+              .pricing-regular {
+                margin-bottom: 0;
+              }
+
+              .select-plan-btn {
+                margin-top: 0;
+                max-width: 200px;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

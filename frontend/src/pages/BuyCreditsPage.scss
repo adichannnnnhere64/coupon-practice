@@ -1,0 +1,350 @@
+.buy-credits-page {
+  // Balance Card
+  .balance-card {
+    margin: 16px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--ion-color-primary), var(--ion-color-primary-shade));
+    
+    .balance-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 8px 0;
+
+      ion-icon {
+        font-size: 48px;
+        color: white;
+      }
+
+      .balance-label {
+        margin: 0;
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.9);
+        font-weight: 500;
+      }
+
+      .balance-amount {
+        margin: 4px 0 0;
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: white;
+      }
+    }
+  }
+
+  // Amount Card
+  .amount-card {
+    margin: 16px;
+    border-radius: 16px;
+
+    .amount-input-wrapper {
+      .amount-input {
+        --background: var(--ion-color-light);
+        --border-radius: 12px;
+        --padding-start: 16px;
+        --inner-padding-end: 16px;
+        margin-bottom: 20px;
+
+        ion-label {
+          font-weight: 600;
+          margin-bottom: 8px;
+          color: var(--ion-color-dark);
+        }
+
+        .custom-input {
+          font-size: 1.5rem;
+          font-weight: 600;
+          color: var(--ion-color-primary);
+          --padding-top: 12px;
+          --padding-bottom: 12px;
+        }
+      }
+
+      // Quick Amounts
+      .quick-amounts {
+        margin-top: 16px;
+
+        .quick-label {
+          margin: 0 0 12px;
+          font-size: 0.9rem;
+          font-weight: 600;
+          color: var(--ion-color-medium);
+        }
+
+        .amount-buttons {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 8px;
+
+          .quick-button {
+            --border-radius: 8px;
+            font-weight: 600;
+            height: 40px;
+            margin: 0;
+          }
+        }
+      }
+
+      // Amount Summary
+      .amount-summary {
+        margin-top: 20px;
+        padding: 16px;
+        background: rgba(var(--ion-color-primary-rgb), 0.05);
+        border-radius: 12px;
+        border-left: 4px solid var(--ion-color-primary);
+
+        .summary-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+
+          ion-text {
+            font-size: 0.95rem;
+          }
+
+          strong {
+            font-size: 1.1rem;
+            color: var(--ion-color-primary);
+          }
+        }
+
+        .exchange-rate {
+          margin: 0;
+          font-size: 0.85rem;
+          color: var(--ion-color-medium);
+          text-align: center;
+        }
+      }
+    }
+  }
+
+  // Payment Card
+  .payment-card {
+    margin: 16px;
+    border-radius: 16px;
+
+    .payment-method-item {
+      --background: transparent;
+      --border-radius: 12px;
+      margin-bottom: 8px;
+      border: 2px solid var(--ion-color-light);
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &.selected {
+        border-color: var(--ion-color-primary);
+        background: rgba(var(--ion-color-primary-rgb), 0.05);
+      }
+
+      h2 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 4px;
+        color: var(--ion-color-dark);
+      }
+
+      p {
+        font-size: 0.9rem;
+        color: var(--ion-color-medium);
+        margin: 2px 0;
+
+        &.balance-text {
+          margin-top: 6px;
+          font-weight: 500;
+          color: var(--ion-color-primary);
+        }
+      }
+
+      ion-icon {
+        font-size: 24px;
+      }
+    }
+
+    // Warning Box
+    .warning-box {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 16px;
+      padding: 12px;
+      background: rgba(var(--ion-color-warning-rgb), 0.1);
+      border-radius: 8px;
+      border-left: 4px solid var(--ion-color-warning);
+
+      ion-icon {
+        font-size: 24px;
+        color: var(--ion-color-warning);
+        flex-shrink: 0;
+      }
+
+      ion-text {
+        font-size: 0.9rem;
+        color: var(--ion-color-warning-shade);
+        line-height: 1.4;
+      }
+    }
+
+    // Error Box
+    .error-box {
+      margin-top: 16px;
+      padding: 12px;
+      background: rgba(var(--ion-color-danger-rgb), 0.1);
+      border-radius: 8px;
+      border-left: 4px solid var(--ion-color-danger);
+
+      ion-text {
+        font-size: 0.9rem;
+        line-height: 1.4;
+      }
+    }
+  }
+
+  // Security Card
+  .security-card {
+    margin: 16px;
+    border-radius: 16px;
+
+    .security-item {
+      --background: rgba(var(--ion-color-success-rgb), 0.05);
+      --border-radius: 12px;
+
+      ion-icon {
+        font-size: 24px;
+      }
+
+      h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 4px;
+        color: var(--ion-color-dark);
+      }
+
+      p {
+        font-size: 0.85rem;
+        color: var(--ion-color-medium);
+        margin: 0;
+      }
+    }
+  }
+
+  // Purchase Section
+  .purchase-section {
+    padding: 20px 16px 30px;
+    background: var(--ion-color-light);
+
+    .purchase-button {
+      --border-radius: 12px;
+      font-weight: 600;
+      height: 56px;
+      font-size: 1.1rem;
+      margin-bottom: 16px;
+
+      ion-icon {
+        font-size: 24px;
+        margin-right: 8px;
+      }
+    }
+
+    .terms-notice {
+      text-align: center;
+
+      small {
+        font-size: 0.8rem;
+        line-height: 1.4;
+      }
+    }
+  }
+}
+
+// Tablet/Desktop styles
+@media (min-width: 768px) {
+  .buy-credits-page {
+    ion-content {
+      --background: var(--ion-color-light);
+    }
+
+    .balance-card,
+    .amount-card,
+    .payment-card,
+    .security-card {
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .balance-card {
+      margin-top: 24px;
+    }
+
+    .amount-card {
+      .amount-input-wrapper {
+        .quick-amounts {
+          .amount-buttons {
+            grid-template-columns: repeat(6, 1fr);
+          }
+        }
+      }
+    }
+
+    .purchase-section {
+      max-width: 600px;
+      margin: 0 auto;
+      background: transparent;
+
+      .purchase-button {
+        max-width: 400px;
+        margin: 0 auto 16px;
+      }
+    }
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .buy-credits-page {
+    .balance-card {
+      background: linear-gradient(135deg, var(--ion-color-primary-shade), var(--ion-color-primary-tint));
+    }
+
+    .amount-card {
+      .amount-input-wrapper {
+        .amount-input {
+          --background: rgba(255, 255, 255, 0.05);
+
+          ion-label {
+            color: var(--ion-color-light);
+          }
+        }
+
+        .amount-summary {
+          background: rgba(var(--ion-color-primary-rgb), 0.1);
+        }
+      }
+    }
+
+    .payment-card {
+      .payment-method-item {
+        border-color: rgba(255, 255, 255, 0.1);
+
+        &.selected {
+          background: rgba(var(--ion-color-primary-rgb), 0.1);
+        }
+
+        h2 {
+          color: var(--ion-color-light);
+        }
+      }
+    }
+
+    .security-card {
+      .security-item {
+        --background: rgba(var(--ion-color-success-rgb), 0.1);
+
+        h3 {
+          color: var(--ion-color-light);
+        }
+      }
+    }
+  }
+}
