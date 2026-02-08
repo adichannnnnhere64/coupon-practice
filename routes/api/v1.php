@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\PaymentGatewayController;
 use App\Http\Controllers\Api\V1\PlanController;
 use App\Http\Controllers\Api\V1\PlanTypeController;
@@ -36,6 +37,38 @@ Route::middleware('throttle:api')->group(function () {
 
 });
 
+// Payment method management routes
+Route::middleware('auth:sanctum')->prefix('payment')->group(function () {
+    Route::get('/methods', [PaymentController::class, 'getPaymentMethods']);
+    Route::post('/methods', [PaymentController::class, 'addPaymentMethod']);
+    Route::delete('/methods/{id}', [PaymentController::class, 'removePaymentMethod']);
+    Route::post('/methods/{id}/set-default', [PaymentController::class, 'setDefaultPaymentMethod']);
+    Route::get('/payment/gateway-config', [PaymentController::class, 'getGatewayConfig']);
+});
+
+
+Route::middleware('auth:sanctum')->prefix('orders')->group(function () {
+    // Get user's orders
+    Route::get('/', [OrderController::class, 'index']);
+
+    // Get order details
+    Route::get('/{id}', [OrderController::class, 'show']);
+
+    // Create new order
+    Route::post('/', [OrderController::class, 'store']);
+
+    // Cancel order
+    Route::post('/{id}/cancel', [OrderController::class, 'cancel']);
+
+    Route::post('/export', [OrderController::class, 'export']);
+});
+
+Route::middleware(['auth:sanctum', 'admin'])->prefix('admin/orders')->group(function () {
+    Route::get('/', [OrderController::class, 'adminIndex']);
+    Route::get('/{id}', [OrderController::class, 'adminShow']);
+    Route::put('/{id}/status', [OrderController::class, 'updateStatus']);
+});
+
 
 Route::prefix('payment')->group(function () {
     // Public routes
@@ -54,7 +87,11 @@ Route::prefix('payment')->group(function () {
 
     // Protected payment routes
     Route::middleware('auth:sanctum')->group(function () {
-        // Payment initiation
+        // Create transaction first
+        Route::post('/transaction', [PaymentController::class, 'createTransaction'])
+            ->name('payment.transaction.create');
+
+        // Payment initiation (requires transaction_id)
         Route::post('/initiate', [PaymentController::class, 'initiate'])
             ->name('payment.initiate');
 
