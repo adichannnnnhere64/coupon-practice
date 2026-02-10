@@ -3,8 +3,10 @@
 namespace App\Filament\Resources\PlanInventories\Schemas;
 
 use App\Models\PlanInventory;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
+use Filament\Tables\Columns\TextColumn;
 
 class PlanInventoryInfolist
 {
@@ -13,7 +15,7 @@ class PlanInventoryInfolist
         return $schema
             ->components([
 
-                                TextColumn::make('planType.name')
+                TextColumn::make('planType.name')
                     ->numeric()
                     ->sortable(),
                 TextEntry::make('code'),
@@ -39,6 +41,21 @@ class PlanInventoryInfolist
                 TextEntry::make('deleted_at')
                     ->dateTime()
                     ->visible(fn (PlanInventory $record): bool => $record->trashed()),
+                SpatieMediaLibraryFileUpload::make('coupon')
+    ->collection('coupon')
+    ->disk('private')
+    ->maxSize(5120)
+    ->columnSpanFull()
+    ->afterStateHydrated(function ($component, $state) {
+        $media = $component->getState()?->first(); // get the first media
+
+        if ($media) {
+            // Set a temporary "preview URL" pointing to your secure route
+            $component->previewUrl(route('coupons.download', $media));
+        }
+    })
+
+
             ]);
     }
 }

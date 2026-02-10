@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Plans\RelationManagers;
 
+use App\Filament\Resources\Plans\Tables\PlansTable;
 use App\Models\PlanAttribute;
 use Filament\Actions\AttachAction;
 use Filament\Actions\BulkActionGroup;

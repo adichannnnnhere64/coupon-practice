@@ -5,11 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-
-class PlanInventory extends Model
+class PlanInventory extends Model implements HasMedia
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, InteractsWithMedia;
 
     protected $fillable = [
         'plan_id',
@@ -52,4 +53,19 @@ class PlanInventory extends Model
     {
         return $query->where('status', 'expired');
     }
+
+      public function registerMediaCollections(): void
+    {
+        $this
+            ->addMediaCollection('coupon')
+            ->useDisk('private')
+            ->singleFile(true);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+
 }

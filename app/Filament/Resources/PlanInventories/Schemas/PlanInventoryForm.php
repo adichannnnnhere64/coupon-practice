@@ -3,9 +3,12 @@
 namespace App\Filament\Resources\PlanInventories\Schemas;
 
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 
 class PlanInventoryForm
@@ -15,19 +18,37 @@ class PlanInventoryForm
         return $schema
             ->components([
 
-                Select::make('plan_id')
-                    ->relationship(name: 'plan', titleAttribute: 'name')
-                    ->createOptionForm([
-                        TextInput::make('name')
-                            ->required(),
-                        TextInput::make('description')
-                            ->required(),
-                    ])
-                    ->searchable()
-                    ->preload()
-                    ->loadingMessage('Loading operators...'),
+                      // RelationManager: auto-assign plan
+        Hidden::make('plan_id')
+            ->visible(fn ($livewire) => $livewire instanceof RelationManager)
+            ->default(fn ($livewire) =>
+                $livewire instanceof RelationManager
+                    ? $livewire->getOwnerRecord()->id
+                    : null
+            ),
+
+        // Normal create/edit: user selects plan
+        Select::make('plan_id')
+            ->visible(fn ($livewire) => ! ($livewire instanceof RelationManager))
+            ->relationship('plan', 'name')
+            ->searchable()
+            ->preload()
+            ->required()
+            ->createOptionForm([
+                TextInput::make('name')->required(),
+                TextInput::make('description')->required(),
+            ]),
+
+
                 TextInput::make('code')
+                    ->columnSpanFull()
                     ->required(),
+
+                SpatieMediaLibraryFileUpload::make('coupon')
+        ->collection('coupon')
+        ->disk('private') // important
+        ->maxSize(5120)
+        ->columnSpanFull(),
                 Select::make('status')
                     ->options([
                         1 => 'Available',

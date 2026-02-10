@@ -22,7 +22,11 @@ class PlanTypeResource extends Resource
 {
     protected static ?string $model = PlanType::class;
 
+    protected static ?string $navigationLabel = 'Operators';
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+
+    protected static ?int $navigationSort = 1;
 
     protected static ?string $recordTitleAttribute = 'name';
 

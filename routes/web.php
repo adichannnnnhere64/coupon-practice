@@ -17,6 +17,31 @@ Route::get('storage/{path}', function ($path) {
     return response()->file($file);
 })->where('path', '.*');
 
+Route::middleware('auth')
+    ->get('/coupons/view/{media}', function (\Spatie\MediaLibrary\MediaCollections\Models\Media $media) {
+        $inventory = $media->model;
+
+        abort_unless(auth()->id() === $inventory->user_id || auth()->id() === 1, 403);
+
+        $path = $media->getPath();
+        $mime = $media->mime_type;
+
+        abort_unless(str_starts_with($mime, 'application/pdf') || str_starts_with($mime, 'image/'), 403);
+
+        return response()->file($path, ['Content-Type' => $mime]);
+    })->name('coupons.view');
+
+Route::middleware('auth')
+    ->get('/coupons/download/{media}', function (\Spatie\MediaLibrary\MediaCollections\Models\Media $media) {
+        $inventory = $media->model;
+
+
+        abort_unless(auth()->id() === $inventory->user_id || auth()->id() === 1, 403);
+
+        return response()->download($media->getPath(), $media->file_name, ['Content-Type' => $media->mime_type]);
+    })->name('coupons.download');
+
+
 Route::get('/{path?}', function ($path = null) {
     $buildDir = public_path('build');
 
@@ -78,3 +103,4 @@ Route::get('/{path?}', function ($path = null) {
 
     abort(404, 'File not found');
 })->where('path', '.*');
+
