@@ -12,34 +12,39 @@ class PaymentGatewayController extends Controller
     /**
      * Get all available payment gateways
      */
-    public function index(Request $request): JsonResponse
-    {
-        $gateways = PaymentGateway::where('is_active', true)
-            ->orderBy('priority')
-            ->get()
-            ->map(function ($gateway) {
-                return [
-                    'id' => $gateway->id,
-                    'name' => $gateway->name,
-                    'display_name' => $gateway->meta['display_name'] ?? $gateway->name,
-                    'driver' => $gateway->driver,
-                    'description' => $gateway->meta['description'] ?? null,
-                    'icon' => $gateway->meta['icon'] ?? null,
-                    'is_external' => $gateway->is_external,
-                    'priority' => $gateway->priority,
-                    'config' => $this->getSafeConfig($gateway),
-                    'meta' => $this->getSafeMeta($gateway),
-                    'created_at' => $gateway->created_at,
-                    'updated_at' => $gateway->updated_at,
-                ];
-            });
 
-        return response()->json([
-            'success' => true,
-            'data' => $gateways,
-            'message' => 'Payment gateways retrieved successfully',
-        ]);
-    }
+    // In your PaymentGatewayController index() method, update the map function:
+
+public function index(Request $request): JsonResponse
+{
+    $gateways = PaymentGateway::where('is_active', true)
+        ->orderBy('priority')
+        ->get()
+        ->map(function ($gateway) {
+            return [
+                'id' => $gateway->id,
+                'name' => $gateway->name,
+                'display_name' => $gateway->meta['display_name'] ?? $gateway->name,
+                'driver' => $gateway->driver,
+                'description' => $gateway->meta['description'] ?? null,
+                'icon' => $gateway->meta['icon'] ?? null,
+                'is_active' => (bool) $gateway->is_active,  // ✅ Convert to boolean
+                'is_external' => (bool) $gateway->is_external,  // ✅ Convert to boolean
+                'disabled' => false,  // ✅ Add this property
+                'priority' => $gateway->priority,
+                'config' => $this->getSafeConfig($gateway),
+                'meta' => $this->getSafeMeta($gateway),
+                'created_at' => $gateway->created_at,
+                'updated_at' => $gateway->updated_at,
+            ];
+        });
+
+    return response()->json([
+        'success' => true,
+        'data' => $gateways,
+        'message' => 'Payment gateways retrieved successfully',
+    ]);
+}
 
     /**
      * Get a specific payment gateway by ID or name
