@@ -76,7 +76,7 @@ class PaymentController extends Controller
                 'currency' => $request->currency ?? 'USD',
                 'description' => $request->description ?? "Credit purchase of {$request->amount} USD",
                 'metadata' => array_merge($request->metadata ?? [], [
-                    'purchase_type' => 'credit_topup',
+                    'purchase_type' => 'credit_purchase',
                     'user_email' => $user->email,
                     'gateway' => $request->gateway,
                 ]),
@@ -91,6 +91,8 @@ class PaymentController extends Controller
                     'currency' => $transaction->currency,
                     'status' => $transaction->status,
                     'created_at' => $transaction->created_at,
+                   'purchase_type' => $request->metadata['purchase_type'] ?? 'credit_purchase',
+                'credits' => $request->amount, //
                 ],
             ], 201);
 
@@ -509,23 +511,23 @@ protected function handleInternalPayment($user, $transaction, $gateway, $request
                 ]);
 
                 // Credit user's wallet if this is a credit purchase
-                $metadata = $transaction->metadata ?? [];
-                if (isset($metadata['purchase_type']) && $metadata['purchase_type'] === 'credit_topup') {
-                    try {
-                        $walletService = app(\Adichan\Wallet\Services\WalletService::class);
-                        $walletService->addFunds(
-                            $transaction->transactionable,
-                            $transaction->total,
-                            "Credit top-up via payment",
-                            ['transaction_id' => $transaction->id, 'payment_id' => $paymentRecord?->id]
-                        );
-                    } catch (\Exception $e) {
-                        Log::error('Failed to add funds to wallet after payment verification', [
-                            'transaction_id' => $transaction->id,
-                            'error' => $e->getMessage(),
-                        ]);
-                    }
-                }
+                /* $metadata = $transaction->metadata ?? []; */
+                /* if (isset($metadata['purchase_type']) && $metadata['purchase_type'] === 'credit_topup') { */
+                /*     try { */
+                /*         $walletService = app(\Adichan\Wallet\Services\WalletService::class); */
+                /*         $walletService->addFunds( */
+                /*             $transaction->transactionable, */
+                /*             $transaction->total, */
+                /*             "Credit top-up via payment", */
+                /*             ['transaction_id' => $transaction->id, 'payment_id' => $paymentRecord?->id] */
+                /*         ); */
+                /*     } catch (\Exception $e) { */
+                /*         Log::error('Failed to add funds to wallet after payment verification', [ */
+                /*             'transaction_id' => $transaction->id, */
+                /*             'error' => $e->getMessage(), */
+                /*         ]); */
+                /*     } */
+                /* } */
             }
 
             return response()->json([
