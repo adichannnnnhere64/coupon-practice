@@ -139,6 +139,9 @@ class PaymentController extends Controller
             // Get transaction
             $transaction = Transaction::findOrFail($request->transaction_id);
 
+            \Log::info('chanel');
+            \Log::info($transaction);
+
             // Debug logging
             Log::info('Payment initiation debug', [
                 'authenticated_user_id' => $user->id,
