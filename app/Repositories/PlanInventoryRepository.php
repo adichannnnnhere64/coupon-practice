@@ -29,7 +29,7 @@ class PlanInventoryRepository
     public function getAvailableByPlan(int $planId, int $limit = null): Collection
     {
         $query = $this->model->where('plan_id', $planId)
-            ->where('status', 'available')
+            ->where('status', PlanInventory::STATUS_AVAILABLE)
             ->orderBy('created_at');
 
         if ($limit) {
@@ -65,7 +65,7 @@ class PlanInventoryRepository
 
         return [
             'total' => $inventories->count(),
-            'available' => $inventories->where('status', 'available')->count(),
+            'available' => $inventories->where('status', PlanInventory::STATUS_AVAILABLE)->count(),
             'sold' => $inventories->where('status', 'sold')->count(),
             'reserved' => $inventories->where('status', 'reserved')->count(),
             'expired' => $inventories->where('status', 'expired')->count(),

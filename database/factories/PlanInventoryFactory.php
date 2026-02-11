@@ -16,7 +16,7 @@ class PlanInventoryFactory extends Factory
         return [
             'plan_id' => Plan::factory(),
             'code' => Str::upper(Str::random(12)),
-            'status' => 'available',
+            'status' => PlanInventory::STATUS_AVAILABLE,
             'meta_data' => null,
         ];
     }
@@ -24,7 +24,7 @@ class PlanInventoryFactory extends Factory
     public function available(): self
     {
         return $this->state([
-            'status' => 'available',
+            'status' => PlanInventory::STATUS_AVAILABLE,
         ]);
     }
 

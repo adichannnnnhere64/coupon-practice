@@ -33,6 +33,7 @@ Route::middleware('throttle:api')->group(function () {
     Route::get('plans', [PlanController::class, 'index'])->name('api.v1.plans.index');
     Route::get('plans/{plan}', [PlanController::class, 'show'])->name('api.v1.plans.show');
     Route::get('plans/{plan}/inventory', [PlanController::class, 'inventory'])->name('api.v1.plans.inventory');
+    Route::get('/plans/{planId}/inventory', [PaymentController::class, 'checkPlanInventory']);
 
 
 });
@@ -133,6 +134,43 @@ Route::prefix('payment')->group(function () {
         });
     });
 });
+
+
+Route::middleware('auth:sanctum')
+    ->get('/coupons/view/{inventory}', function (\App\Models\PlanInventory $inventory) {
+
+        abort_unless(auth()->id() === $inventory->user_id || auth()->id() === 1, 403);
+
+        $media = $inventory->getFirstMedia('coupon');
+        abort_unless($media, 404);
+
+        $mime = $media->mime_type;
+        abort_unless(
+            str_starts_with($mime, 'application/pdf') ||
+            str_starts_with($mime, 'image/'),
+            403
+        );
+
+        return response()->file($media->getPath(), [
+            'Content-Type' => $mime
+        ]);
+    })->name('coupons.view');
+
+
+Route::middleware('auth:sanctum')
+    ->get('/coupons/download/{inventory}', function (\App\Models\PlanInventory $inventory) {
+
+        abort_unless(auth()->id() === $inventory->user_id || auth()->id() === 1, 403);
+
+        $media = $inventory->getFirstMedia('coupon');
+        abort_unless($media, 404);
+
+        return response()->download(
+            $media->getPath(),
+            $media->file_name,
+            ['Content-Type' => $media->mime_type]
+        );
+    })->name('coupons.download');
 
 
 // Protected routes with authenticated rate limiter (120/min)

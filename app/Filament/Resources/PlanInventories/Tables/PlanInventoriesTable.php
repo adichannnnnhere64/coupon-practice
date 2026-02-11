@@ -26,8 +26,8 @@ class PlanInventoriesTable
                 ->formatStateUsing(fn ($state) => match ($state) {
                     1 => 'Available',
                     2 => 'Reserved',
-                    3 => 'Expired',
-                    4 => 'Sold',
+                    3 => 'Sold',
+                    4 => 'Expired',
                     default => 'Unknown',
                 })
                     ->badge(),

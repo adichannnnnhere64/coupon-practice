@@ -20,7 +20,7 @@ class PlanInventoryService
         $data = array_merge([
             'plan_id' => $planId,
             'code' => $code,
-            'status' => 'available',
+            'status' => PlanInventory::STATUS_AVAILABLE,
         ], $additionalData);
 
         return $this->repository->create($data);
@@ -34,7 +34,7 @@ class PlanInventoryService
             $inventories[] = array_merge([
                 'plan_id' => $planId,
                 'code' => $code,
-                'status' => 'available',
+                'status' => PlanInventory::STATUS_AVAILABLE,
             ], $additionalData);
         }
 
@@ -65,7 +65,7 @@ class PlanInventoryService
             throw new \Exception('Inventory not found');
         }
 
-        if ($inventory->status !== 'available') {
+        if ($inventory->status !== PlanInventory::STATUS_AVAILABLE) {
             throw new \Exception('Inventory is not available');
         }
 
@@ -80,7 +80,7 @@ class PlanInventoryService
             throw new \Exception('Inventory not found');
         }
 
-        if (!in_array($inventory->status, ['available', 'reserved'])) {
+        if (!in_array($inventory->status, [PlanInventory::STATUS_AVAILABLE, 'reserved'])) {
             throw new \Exception('Inventory cannot be sold');
         }
 

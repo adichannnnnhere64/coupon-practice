@@ -123,7 +123,7 @@ it('can add inventory with code', function () {
 
     expect($inventory)->toBeInstanceOf(PlanInventory::class)
         ->and($inventory->code)->toBe('TEST123456')
-        ->and($inventory->status)->toBe('available')
+        ->and($inventory->status)->toBe(PlanInventory::STATUS_AVAILABLE)
         ->and($inventory->plan_id)->toBe($plan->id);
 });
 
@@ -202,7 +202,7 @@ it('can get available inventory by plan', function () {
     $available = $this->inventoryService->getAvailableInventory($plan->id);
 
     expect($available)->toHaveCount(5)
-        ->and($available->every(fn ($inv) => $inv->status === 'available'))->toBeTrue();
+        ->and($available->every(fn ($inv) => $inv->status === PlanInventory::STATUS_AVAILABLE))->toBeTrue();
 });
 
 it('can limit available inventory results', function () {

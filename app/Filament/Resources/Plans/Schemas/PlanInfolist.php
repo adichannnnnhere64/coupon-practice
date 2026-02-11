@@ -27,6 +27,8 @@ class PlanInfolist
                     ->columnSpanFull(),
                 IconEntry::make('is_active')
                     ->boolean(),
+                IconEntry::make('inventory_enabled')
+                    ->boolean(),
                 TextEntry::make('created_at')
                     ->dateTime()
                     ->placeholder('-'),

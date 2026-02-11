@@ -43,6 +43,8 @@ class PlanForm
                     ->columnSpanFull(),
                 Toggle::make('is_active')
                     ->required(),
+                Toggle::make('inventory_enabled')
+                    ->required(),
             ]);
     }
 }
