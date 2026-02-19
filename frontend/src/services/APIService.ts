@@ -67,9 +67,14 @@ export interface User {
 export interface PlanType {
   id: number;
   name: string;
+  slug?: string;
   description: string | null;
   icon: string | null;
   image: string | null;
+  is_active?: boolean;
+  category_id?: number;
+  category?: Category;
+  plans_count?: number;
   available_coupons_count?: number;
   created_at?: string;
   updated_at?: string;
@@ -113,6 +118,20 @@ export interface Media {
 export interface StockSummary {
   total: number;
   available: number;
+}
+
+// Category
+export interface Category {
+  id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  is_active: boolean;
+  icon_url?: string;
+  plan_types_count?: number;
+  plan_types?: PlanType[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface InventoryItem {
@@ -289,6 +308,42 @@ class ApiClient {
    */
   async me(): Promise<User> {
     const response = await this.get<ApiResponse<User>>('/me');
+    return response.data;
+  }
+
+  // ============================================================================
+  // CATEGORY ENDPOINTS
+  // ============================================================================
+
+  /**
+   * Get all categories
+   */
+  async getCategories(params?: {
+    page?: number;
+    per_page?: number;
+  }): Promise<ApiResponse<Category[]>> {
+    return await this.get<ApiResponse<Category[]>>('/categories', { params });
+  }
+
+  /**
+   * Get single category
+   */
+  async getCategory(id: number): Promise<Category> {
+    const response = await this.get<ApiResponse<Category>>(`/categories/${id}`);
+    return response.data;
+  }
+
+  /**
+   * Get plan types for a category
+   */
+  async getCategoryPlanTypes(categoryId: number): Promise<{
+    category: Category;
+    plan_types: PlanType[];
+  }> {
+    const response = await this.get<ApiResponse<{
+      category: Category;
+      plan_types: PlanType[];
+    }>>(`/categories/${categoryId}/plan-types`);
     return response.data;
   }
 

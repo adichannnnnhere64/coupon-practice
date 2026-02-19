@@ -31,7 +31,7 @@ import {
 } from '@ionic/react';
 import {
   search,
-  eye,
+  // eye,
   download,
   arrowBack,
   arrowForward,
@@ -49,7 +49,7 @@ import {
   cart,
 } from 'ionicons/icons';
 import './OrderListPage.scss';
-import { useHistory } from 'react-router-dom';
+// import { useHistory } from 'react-router-dom';
 import { useAuth } from '@services/useApi';
 import apiClient from '@services/APIService';
 
@@ -74,6 +74,14 @@ interface Order {
   payment_method: string | null;
   payment_status: string | null;
   metadata: Record<string, any>;
+  inventory_items?: {  // Add this for backward compatibility
+    id: number;
+    code: string;
+    coupon_url: string | null;
+    download_url: string | null;
+    view_url: string | null;
+    expires_at: string | null;
+  }[];
 }
 
 interface OrderStats {
@@ -108,10 +116,10 @@ const sortOptions = [
 ];
 
 const OrderListPage: React.FC = () => {
-  const history = useHistory();
+  // const history = useHistory();
   const { user } = useAuth();
 	console.log(user)
-  
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [stats, setStats] = useState<OrderStats>({
     total_orders: 0,
@@ -127,7 +135,7 @@ const OrderListPage: React.FC = () => {
     per_page: 10,
     has_more: false,
   });
-  
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -143,25 +151,33 @@ const OrderListPage: React.FC = () => {
   const [cancellingOrderId, setCancellingOrderId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+ function getBaseUrl(): string {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+    return `${backendUrl}/api/v1`;
+  }
+
   const fetchOrders = async (page = 1, resetFilters = false) => {
+
+
+
     try {
       if (!refreshing) setLoading(true);
       setError(null);
-      
+
       const params: any = {
         page,
         per_page: 10,
         sort_by: sortBy,
       };
-      
+
       if (searchQuery && !resetFilters) {
         params.search = searchQuery;
       }
-      
+
       if (statusFilter !== 'all' && !resetFilters) {
         params.status = statusFilter;
       }
-      
+
       const response = await apiClient.get<{
         success: boolean;
         data: {
@@ -170,7 +186,7 @@ const OrderListPage: React.FC = () => {
           pagination: Pagination;
         };
       }>('/orders', { params });
-      
+
       if (response.success && response.data) {
         if (page === 1 || resetFilters) {
           setOrders(response.data.orders);
@@ -216,22 +232,37 @@ const OrderListPage: React.FC = () => {
     }
   };
 
-  const handleViewOrder = (orderId: number) => {
-    history.push(`/orders/${orderId}`);
-  };
-
+  // const handleViewOrder = (orderId: number) => {
+  //   history.push(`/orders/${orderId}`);
+  // };
+  //
   const handleShowOrderDetails = (order: Order) => {
+        console.log(order)
     setSelectedOrder(order);
     setShowOrderDetails(true);
   };
 
+    useEffect(() => {
+  // Check if we need to refresh orders (coming from payment success)
+  const shouldRefresh = sessionStorage.getItem('refresh_orders');
+  if (shouldRefresh) {
+    sessionStorage.removeItem('refresh_orders');
+    fetchOrders(1);
+  }
+}, []);
+
+// Also add this effect to fetch orders when component mounts
+useEffect(() => {
+  fetchOrders(1);
+}, []);
+
   const handleCancelOrder = async () => {
     if (!cancellingOrderId) return;
-    
+
     try {
       setLoading(true);
       const response = await apiClient.post(`/orders/${cancellingOrderId}/cancel`) as any;
-      
+
       if (response.success) {
         fetchOrders(1);
         setShowCancelConfirm(false);
@@ -247,17 +278,17 @@ const OrderListPage: React.FC = () => {
   const handleExportOrders = async () => {
     try {
       setExporting(true);
-      
+
       const params: any = {
         format: exportFormat,
       };
-      
+
       if (exportStatus !== 'all') {
         params.status = exportStatus;
       }
-      
+
       const response = await apiClient.post('/orders/export', params) as any;
-      
+
       if (response.success && response.data) {
         if (exportFormat === 'csv') {
           // Create and download CSV file
@@ -265,7 +296,7 @@ const OrderListPage: React.FC = () => {
           const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
           const link = document.createElement('a');
           const url = URL.createObjectURL(blob);
-          
+
           link.setAttribute('href', url);
           link.setAttribute('download', response.data.filename);
           link.style.visibility = 'hidden';
@@ -273,7 +304,7 @@ const OrderListPage: React.FC = () => {
           link.click();
           document.body.removeChild(link);
         }
-        
+
         setShowExportModal(false);
       }
     } catch (error) {
@@ -285,13 +316,13 @@ const OrderListPage: React.FC = () => {
 
   const convertToCSV = (data: any[]): string => {
     if (data.length === 0) return '';
-    
+
     const headers = Object.keys(data[0]);
     const csvRows = [
       headers.join(','),
       ...data.map(row => headers.map(header => `"${row[header]}"`).join(','))
     ];
-    
+
     return csvRows.join('\n');
   };
 
@@ -332,12 +363,12 @@ const OrderListPage: React.FC = () => {
 
   const getPaymentMethodIcon = (method: string | null) => {
     if (!method) return card;
-    
+
     if (method.toLowerCase().includes('card')) return card;
     if (method.toLowerCase().includes('paypal')) return receipt;
     if (method.toLowerCase().includes('wallet')) return wallet;
     if (method.toLowerCase().includes('cash')) return cash;
-    
+
     return card;
   };
 
@@ -421,8 +452,8 @@ const OrderListPage: React.FC = () => {
                       </td>
                       <td data-label="Payment">
                         <div className="payment-method">
-                          <IonIcon 
-                            icon={getPaymentMethodIcon(order.payment_method)} 
+                          <IonIcon
+                            icon={getPaymentMethodIcon(order.payment_method)}
                             style={{ marginRight: '6px', verticalAlign: 'middle' }}
                           />
                           <span>{order.payment_method || 'Not paid'}</span>
@@ -439,13 +470,6 @@ const OrderListPage: React.FC = () => {
                             onClick={() => handleShowOrderDetails(order)}
                           >
                             <IonIcon slot="icon-only" icon={informationCircle} />
-                          </IonButton>
-                          <IonButton
-                            size="small"
-                            fill="clear"
-                            onClick={() => handleViewOrder(order.id)}
-                          >
-                            <IonIcon slot="icon-only" icon={eye} />
                           </IonButton>
                           {canCancelOrder(order) && (
                             <IonButton
@@ -473,8 +497,67 @@ const OrderListPage: React.FC = () => {
     );
   };
 
+
+
   // Order Details Modal
-  const renderOrderDetailsModal = () => (
+  const renderOrderDetailsModal = function () {
+
+        const handleViewCoupon = async () => {
+  const id = selectedOrder?.metadata?.reserved_inventory_ids?.[0];
+  if (!id) return;
+
+  try {
+    const response = await fetch(
+      `${getBaseUrl()}/coupons/view/${id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+      }
+    );
+
+    if (!response.ok) throw new Error('Failed to fetch');
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    window.open(url, '_blank');
+
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+
+//         const handleDownloadCoupon = async () => {
+//   const id = selectedOrder?.metadata?.reserved_inventory_ids?.[0];
+//   if (!id) return;
+//
+//   try {
+//     const response = await fetch(
+//       `${getBaseUrl()}/coupons/download/${id}`,
+//       {
+//         headers: {
+//           Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+//         },
+//       }
+//     );
+//
+//     if (!response.ok) throw new Error('Failed to fetch');
+//
+//     const blob = await response.blob();
+//     const url = window.URL.createObjectURL(blob);
+//     window.open(url, '_blank');
+//
+//   } catch (error) {
+//     console.error(error);
+//   }
+// };
+//
+
+
+  return (
+
+
     <IonModal isOpen={showOrderDetails} onDidDismiss={() => setShowOrderDetails(false)}>
       <IonHeader>
         <IonToolbar>
@@ -495,7 +578,6 @@ const OrderListPage: React.FC = () => {
                     {getStatusBadge(selectedOrder.status)}
                   </div>
                 </div>
-                
                 <IonGrid>
                   <IonRow>
                     <IonCol size="12" sizeMd="6">
@@ -523,7 +605,7 @@ const OrderListPage: React.FC = () => {
                         </IonList>
                       </div>
                     </IonCol>
-                    
+
                     <IonCol size="12" sizeMd="6">
                       <div className="payment-info-section">
                         <h3><IonIcon icon={card} /> Payment Information</h3>
@@ -553,31 +635,17 @@ const OrderListPage: React.FC = () => {
                       </div>
                     </IonCol>
                   </IonRow>
-                  
+
                   <IonRow>
                     <IonCol size="12">
                       <div className="order-items-section">
-                        <h3><IonIcon icon={cart} /> Order Items ({selectedOrder.items_count})</h3>
-                        <IonList lines="full">
-                          {selectedOrder.items.map((item) => (
-                            <IonItem key={item.id}>
-                              <IonLabel>
-                                <h3>{item.name}</h3>
-                                <p>Quantity: {item.quantity}</p>
-                              </IonLabel>
-                              <IonNote slot="end">
-                                <div className="item-price">
-                                  <p>{formatCurrency(item.price)} each</p>
-                                  <p className="item-subtotal">{formatCurrency(item.subtotal)}</p>
-                                </div>
-                              </IonNote>
-                            </IonItem>
-                          ))}
-                        </IonList>
+
+                                                    <IonButton onClick={handleViewCoupon}>View</IonButton>
+
                       </div>
                     </IonCol>
                   </IonRow>
-                  
+
                   <IonRow>
                     <IonCol size="12">
                       <div className="order-total-section">
@@ -595,16 +663,12 @@ const OrderListPage: React.FC = () => {
                     </IonCol>
                   </IonRow>
                 </IonGrid>
-                
+
                 <div className="order-actions ion-padding-top">
-                  <IonButton expand="block" onClick={() => handleViewOrder(selectedOrder.id)}>
-                    <IonIcon slot="start" icon={eye} />
-                    View Full Details
-                  </IonButton>
                   {canCancelOrder(selectedOrder) && (
-                    <IonButton 
-                      expand="block" 
-                      color="danger" 
+                    <IonButton
+                      expand="block"
+                      color="danger"
                       fill="outline"
                       onClick={() => {
                         setShowOrderDetails(false);
@@ -622,8 +686,9 @@ const OrderListPage: React.FC = () => {
           </div>
         )}
       </IonContent>
-    </IonModal>
-  );
+    </IonModal> )
+
+    };
 
   // Export Modal
   const renderExportModal = () => (
@@ -644,11 +709,11 @@ const OrderListPage: React.FC = () => {
                 <IonListHeader>
                   <IonLabel>Export Options</IonLabel>
                 </IonListHeader>
-                
+
                 <IonItem>
                   <IonLabel>Format</IonLabel>
-                  <IonSelect 
-                    value={exportFormat} 
+                  <IonSelect
+                    value={exportFormat}
                     onIonChange={(e) => setExportFormat(e.detail.value)}
                     interface="popover"
                   >
@@ -656,11 +721,11 @@ const OrderListPage: React.FC = () => {
                     <IonSelectOption value="json">JSON</IonSelectOption>
                   </IonSelect>
                 </IonItem>
-                
+
                 <IonItem>
                   <IonLabel>Status Filter</IonLabel>
-                  <IonSelect 
-                    value={exportStatus} 
+                  <IonSelect
+                    value={exportStatus}
                     onIonChange={(e) => setExportStatus(e.detail.value)}
                     interface="popover"
                   >
@@ -672,20 +737,20 @@ const OrderListPage: React.FC = () => {
                   </IonSelect>
                 </IonItem>
               </IonList>
-              
+
               <div className="export-info ion-padding-top">
                 <IonText color="medium">
                   <p>
-                    This will export all orders matching the selected filters. 
-                    The exported file will contain order details including ID, date, status, 
+                    This will export all orders matching the selected filters.
+                    The exported file will contain order details including ID, date, status,
                     items, totals, and payment information.
                   </p>
                 </IonText>
               </div>
-              
+
               <div className="export-actions ion-padding-top">
-                <IonButton 
-                  expand="block" 
+                <IonButton
+                  expand="block"
                   onClick={handleExportOrders}
                   disabled={exporting}
                 >
@@ -745,11 +810,11 @@ const OrderListPage: React.FC = () => {
                 <IonIcon slot="start" icon={arrowBack} />
                 Previous
               </IonButton>
-              
+
               <div className="page-numbers">
                 {paginationButtons}
               </div>
-              
+
               <IonButton
                 fill="outline"
                 size="small"
@@ -760,7 +825,7 @@ const OrderListPage: React.FC = () => {
                 <IonIcon slot="end" icon={arrowForward} />
               </IonButton>
             </div>
-            
+
             <div className="pagination-info">
               <IonNote>
                 Showing {((pagination.current_page - 1) * pagination.per_page) + 1} to{' '}
@@ -885,7 +950,7 @@ const OrderListPage: React.FC = () => {
                 </div>
               </IonCol>
             </IonRow>
-            
+
             {(searchQuery || statusFilter !== 'all') && (
               <IonRow>
                 <IonCol>
@@ -894,14 +959,14 @@ const OrderListPage: React.FC = () => {
                       <IonIcon icon={closeCircle} />
                       <IonLabel>Clear Filters</IonLabel>
                     </IonChip>
-                    
+
                     {searchQuery && (
                       <IonChip>
                         <IonIcon icon={search} />
                         <IonLabel>Search: {searchQuery}</IonLabel>
                       </IonChip>
                     )}
-                    
+
                     {statusFilter !== 'all' && (
                       <IonChip>
                         <IonIcon icon={filter} />

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\OrderController;
@@ -24,6 +25,11 @@ Route::middleware('throttle:auth')->group(function () {
 });
 
 Route::middleware('throttle:api')->group(function () {
+    // Categories
+    Route::get('categories', [CategoryController::class, 'index'])->name('api.v1.categories.index');
+    Route::get('categories/{category}', [CategoryController::class, 'show'])->name('api.v1.categories.show');
+    Route::get('categories/{category}/plan-types', [CategoryController::class, 'planTypes'])->name('api.v1.categories.plan-types');
+
     // Plan Types
     Route::get('plan-types', [PlanTypeController::class, 'index'])->name('api.v1.plan-types.index');
     Route::get('plan-types/{planType}', [PlanTypeController::class, 'show'])->name('api.v1.plan-types.show');

@@ -46,7 +46,7 @@ const PaymentMethodComponent: React.FC<PaymentMethodComponentProps> = ({
     try {
       setLoading(true);
       const response = await apiClient.get<{ success: boolean; data: PaymentMethod[] }>('/payment/methods');
-      
+
       if (response.success && response.data) {
         setPaymentMethods(response.data);
         const defaultMethod = response.data.find((m: PaymentMethod) => m.is_default);
@@ -68,9 +68,9 @@ const PaymentMethodComponent: React.FC<PaymentMethodComponentProps> = ({
       setIsAdding(true);
       setError('');
 
-      const response = await apiClient.post<{ 
-        success: boolean; 
-        message?: string; 
+      const response = await apiClient.post<{
+        success: boolean;
+        message?: string;
         data?: any;
       }>('/payment/methods', {
         payment_method_id: paymentMethodId,
@@ -84,9 +84,9 @@ const PaymentMethodComponent: React.FC<PaymentMethodComponentProps> = ({
       }
 
       await fetchPaymentMethods();
-      onPaymentMethodAdded?.();
+      onPaymentMethodAdded?.(null);
       setShowAddForm(false);
-      
+
     } catch (error: any) {
       console.error('Add payment method error:', error);
       setError(error.message || 'Failed to add payment method');
@@ -99,7 +99,7 @@ const PaymentMethodComponent: React.FC<PaymentMethodComponentProps> = ({
   const handleRemovePaymentMethod = async (methodId: string): Promise<void> => {
     try {
       const response = await apiClient.delete<{ success: boolean; message?: string }>(`/payment/methods/${methodId}`);
-      
+
       if (response.success) {
         await fetchPaymentMethods();
         if (selectedMethod === methodId) {
@@ -145,8 +145,8 @@ const PaymentMethodComponent: React.FC<PaymentMethodComponentProps> = ({
         </IonCardHeader>
         <IonCardContent>
           {paymentMethods.length > 0 ? (
-            <IonRadioGroup 
-              value={selectedMethod} 
+            <IonRadioGroup
+              value={selectedMethod}
               onIonChange={(e) => handleMethodSelect(e.detail.value)}
             >
               <IonList lines="none">
@@ -189,9 +189,9 @@ const PaymentMethodComponent: React.FC<PaymentMethodComponentProps> = ({
           )}
 
           {showAddButton && !showAddForm && (
-            <IonButton 
-              expand="block" 
-              fill="outline" 
+            <IonButton
+              expand="block"
+              fill="outline"
               onClick={handleToggleAddForm}
               disabled={!gatewayConfig?.public_key}
               className="add-button"
@@ -205,8 +205,8 @@ const PaymentMethodComponent: React.FC<PaymentMethodComponentProps> = ({
             <div className="add-form-container">
               <div className="form-header">
                 <IonText><h3>Add New Card</h3></IonText>
-                <IonButton 
-                  fill="clear" 
+                <IonButton
+                  fill="clear"
                   size="small"
                   onClick={handleToggleAddForm}
                   disabled={isAdding}
@@ -214,13 +214,13 @@ const PaymentMethodComponent: React.FC<PaymentMethodComponentProps> = ({
                   Cancel
                 </IonButton>
               </div>
-              
+
               <StripeCardForm
                 publicKey={gatewayConfig.public_key}
                 onSubmit={handleAddPaymentMethod}
                 disabled={isAdding}
               />
-              
+
               <div className="security-notice">
                 <IonIcon icon={checkmarkOutline} color="success" size="small" />
                 <IonText color="medium">

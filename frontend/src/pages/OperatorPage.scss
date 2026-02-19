@@ -187,6 +187,34 @@
             }
           }
 
+          .stock-status {
+            margin-bottom: 12px;
+
+            .stock-chip {
+              margin: 0;
+              font-size: 0.8rem;
+              font-weight: 500;
+
+              ion-icon {
+                font-size: 14px;
+                margin-right: 4px;
+              }
+            }
+          }
+
+          &.plan-unavailable {
+            opacity: 0.7;
+            cursor: not-allowed;
+
+            .plan-card-header {
+              color: var(--gray-medium);
+            }
+          }
+
+          &.low-stock {
+            border-left: 3px solid var(--warning);
+          }
+
           .plan-metadata {
             margin-top: 15px;
             padding-top: 15px;

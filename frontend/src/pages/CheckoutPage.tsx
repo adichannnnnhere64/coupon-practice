@@ -22,22 +22,27 @@ import {
   IonChip,
   IonBadge,
   IonSpinner,
+  IonRadio,
+  IonRadioGroup,
 } from '@ionic/react';
 import { useParams, useHistory, useLocation } from 'react-router-dom';
-import { 
-  arrowBack, 
-  wallet, 
+import {
+  arrowBack,
+  wallet,
   checkmarkCircle,
   cash,
   shieldCheckmark,
   informationCircle,
   timeOutline,
   pricetagOutline,
+  cardOutline,
+  warning,
 } from 'ionicons/icons';
 import './CheckoutPage.scss';
 import apiClient from '@services/APIService';
 import { useAuth } from '@services/useApi';
 import { RouteName } from '@utils/RouteName';
+import PaymentMethodComponent from '@components/PaymentMethodComponent';
 
 interface PlanType {
   id: number;
@@ -63,25 +68,123 @@ interface LocationState {
   operator?: Operator;
 }
 
+interface TransactionResponse {
+  success: boolean;
+  message: string;
+  data: {
+    transaction_id: number;
+    amount: number;
+    currency: string;
+    status: string;
+    created_at: string;
+  };
+}
+
+interface PaymentResponse {
+  success: boolean;
+  message: string;
+  data: {
+    payment_reference: string;
+    requires_action: boolean;
+    redirect_url?: string;
+    action_data?: {
+      client_secret?: string;
+      payment_method?: string;
+      status?: string;
+    };
+  };
+}
+
 const CheckoutPage: React.FC = () => {
+
+
+    // Update your fetchGateways function in CheckoutPage.tsx:
+
+useEffect(() => {
+  const fetchGateways = async () => {
+    try {
+      setGatewaysLoading(true);
+      const response = await apiClient.get<{ success: boolean; data: any[] }>('/payment/gateways');
+
+      console.log('Gateways API Response:', response);
+
+      if (response.success && response.data) {
+        console.log('All gateways from API:', response.data);
+
+        // Fix: Handle undefined is_active by treating it as true
+        const externalGateways = response.data.filter(gateway => {
+          // If is_active is undefined, assume it's true (active)
+          const isActive = gateway.is_active === undefined ? true : Boolean(gateway.is_active);
+          const isNotInternal = gateway.name !== 'internal';
+          const isExternal = Boolean(gateway.is_external); // stripe shows is_external: true
+
+          console.log(`Gateway ${gateway.name}:`, {
+            isActive,
+            isNotInternal,
+            isExternal,
+            is_active_value: gateway.is_active,
+            is_external_value: gateway.is_external
+          });
+
+          return isActive && isNotInternal && isExternal;
+        });
+
+        console.log('External gateways for checkout:', externalGateways);
+
+        setGateways(externalGateways);
+
+        if (externalGateways.length > 0) {
+          const stripeGateway = externalGateways.find(g => g.name === 'stripe');
+          if (stripeGateway) {
+            console.log('Found Stripe gateway:', stripeGateway);
+            setSelectedGateway('stripe');
+          } else {
+            console.log('Stripe NOT found in filtered gateways');
+            setSelectedGateway(externalGateways[0].name);
+          }
+        } else {
+          console.warn('No external payment gateways available');
+          setError('No external payment methods available. Please use wallet payment or contact support.');
+        }
+      } else {
+        setError('Failed to load payment options. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error fetching gateways:', error);
+      setError('Failed to load payment options. Please try again.');
+    } finally {
+      setGatewaysLoading(false);
+    }
+  };
+
+  fetchGateways();
+}, []);
+
+
   const { productId } = useParams<{ productId: string }>();
   const history = useHistory();
   const location = useLocation<LocationState>();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, refreshUser } = useAuth();
 
   useEffect(() => {
     if (!isAuthenticated) {
       history.replace('/');
     }
   }, [isAuthenticated, history]);
-  
+
   const [plan, setPlan] = useState<PlanType | null>(location.state?.plan || null);
   const [operator, setOperator] = useState<Operator | null>(location.state?.operator || null);
   const [loading, setLoading] = useState(!plan);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('credits');
+  const [paymentMethod, setPaymentMethod] = useState<'credits' | 'external'>('credits');
+  const [selectedGateway, setSelectedGateway] = useState<string>('');
+  const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<string>('');
+  const [error, setError] = useState<string>('');
+  const [transactionId, setTransactionId] = useState<number | null>(null);
+  const [gateways, setGateways] = useState<any[]>([]);
+  const [gatewaysLoading, setGatewaysLoading] = useState(false);
 
   // Fetch plan data if not passed via location state
   useEffect(() => {
@@ -90,8 +193,7 @@ const CheckoutPage: React.FC = () => {
         try {
           setLoading(true);
           const planData = await apiClient.getPlan(parseInt(productId));
-          
-          // Map the API response to our PlanType interface
+
           const mappedPlan: PlanType = {
             id: planData.id,
             plan_type_id: planData.plan_type_id,
@@ -103,10 +205,9 @@ const CheckoutPage: React.FC = () => {
             discount_percentage: planData.discount_percentage || 0,
             meta_data: '',
           };
-          
+
           setPlan(mappedPlan);
 
-          // Try to fetch operator data if we have plan_type_id
           if (planData.plan_type_id) {
             const operatorData = await apiClient.getPlanType(planData.plan_type_id);
             setOperator({
@@ -118,6 +219,7 @@ const CheckoutPage: React.FC = () => {
           }
         } catch (error) {
           console.error('Error fetching plan:', error);
+          setError('Failed to load plan details');
         } finally {
           setLoading(false);
         }
@@ -127,55 +229,355 @@ const CheckoutPage: React.FC = () => {
     fetchPlanData();
   }, [productId, plan]);
 
+  // Fetch available payment gateways
+  useEffect(() => {
+    const fetchGateways = async () => {
+      try {
+        setGatewaysLoading(true);
+        const response = await apiClient.get<{ success: boolean; data: any[] }>('/payment/gateways');
+
+        console.log('Gateways API Response:', response);
+
+        if (response.success && response.data) {
+          console.log('All gateways from API:', response.data);
+
+          // Include ALL active gateways except internal
+          const externalGateways = response.data.filter(g =>
+            g.is_active && g.name !== 'internal'
+          );
+
+          console.log('External gateways for checkout:', externalGateways);
+
+          setGateways(externalGateways);
+
+          if (externalGateways.length > 0) {
+            // Try to find Stripe first
+            const stripeGateway = externalGateways.find(g => g.name === 'stripe');
+            if (stripeGateway) {
+              setSelectedGateway('stripe');
+              console.log('Selected Stripe as default gateway');
+            } else {
+              // Otherwise use the first available gateway
+              setSelectedGateway(externalGateways[0].name);
+              console.log('Selected first gateway:', externalGateways[0].name);
+            }
+          } else {
+            console.warn('No external payment gateways available');
+            setError('No payment methods available. Please try again later.');
+          }
+        } else {
+          // console.error('Failed to fetch gateways:', response.message);
+          setError('Failed to load payment options. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error fetching gateways:', error);
+        setError('Failed to load payment options. Please try again.');
+      } finally {
+        setGatewaysLoading(false);
+      }
+    };
+
+    fetchGateways();
+  }, []);
+
   const userCredits = parseFloat(user?.wallet_balance || '0');
   const totalPrice = plan?.actual_price || 0;
   const hasEnoughCredits = userCredits >= totalPrice;
 
-  const handleCheckout = () => {
+  const paymentMethods = [
+    {
+      id: 'credits',
+      name: 'Wallet Balance',
+      icon: wallet,
+      description: `Available: $${userCredits.toFixed(2)}`,
+      disabled: !hasEnoughCredits,
+    },
+    {
+      id: 'external',
+      name: 'Credit/Debit Card',
+      icon: cardOutline,
+      description: 'Pay with external payment',
+      disabled: gateways.length === 0,
+    },
+  ];
+
+  const handleCheckout = async () => {
     if (!user) {
-      // Redirect to login if not authenticated
       history.push('/login');
       return;
     }
-    setShowConfirmation(true);
+
+    if (paymentMethod === 'credits' && !hasEnoughCredits) {
+      setError('Insufficient wallet balance. Please add funds or use external payment.');
+      return;
+    }
+
+    if (paymentMethod === 'external') {
+      if (!selectedGateway) {
+        setError('Please select a payment gateway');
+        return;
+      }
+
+      if (selectedGateway === 'stripe' && !selectedPaymentMethodId) {
+        setError('Please select or add a payment method');
+        return;
+      }
+    }
+
+    try {
+      setIsProcessing(true);
+      setError('');
+
+      // Create transaction
+      const transactionData = {
+        amount: totalPrice,
+        gateway: paymentMethod === 'credits' ? 'internal' : selectedGateway,
+        currency: 'USD',
+        description: `Purchase: ${plan?.name}`,
+        metadata: {
+          purchase_type: 'plan_purchase',
+          plan_id: plan?.id,
+          operator_id: operator?.id,
+          user_email: user.email,
+        },
+      };
+
+      const transactionResponse = await apiClient.post<TransactionResponse>('/payment/transaction', transactionData);
+
+      if (!transactionResponse.success) {
+        throw new Error(transactionResponse.message || 'Failed to create transaction');
+      }
+
+      setTransactionId(transactionResponse.data.transaction_id);
+      setShowConfirmation(true);
+
+    } catch (error: any) {
+      console.error('Transaction creation failed:', error);
+      setError(error.message || 'Failed to start purchase process');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleConfirmPurchase = async () => {
+    if (!transactionId) {
+      setError('Transaction not found');
+      return;
+    }
+
+    if (paymentMethod === 'external' && selectedGateway === 'stripe' && !selectedPaymentMethodId) {
+      setError('Please select or add a payment method');
+      return;
+    }
+
     setIsProcessing(true);
-    
+    setShowConfirmation(false);
+
     try {
-      // TODO: Replace with actual API call to purchase
-      // await apiClient.purchasePlan({
-      //   plan_id: plan?.id,
-      //   operator_id: operator?.id,
-      //   payment_method: paymentMethod,
-      // });
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+      if (paymentMethod === 'credits') {
+        await handleWalletPayment();
+      } else {
+        await handleExternalPayment();
+      }
+    } catch (error: any) {
+      setIsProcessing(false);
+      setError(error.message || 'Purchase failed. Please try again.');
+      console.error('Purchase failed:', error);
+    }
+  };
+
+  const handleWalletPayment = async () => {
+    try {
+      const paymentData = {
+        transaction_id: transactionId,
+        gateway: 'internal',
+        return_url: `${window.location.origin}/payment/success?transaction=${transactionId}`,
+        cancel_url: `${window.location.origin}/payment/cancel?transaction=${transactionId}`,
+        description: `Plan Purchase - ${plan?.name}`,
+        customer_email: user?.email,
+        customer_name: user?.name,
+        currency: 'USD',
+        metadata: {
+          user_id: user?.id,
+          type: 'plan_purchase',
+          plan_id: plan?.id,
+        },
+      };
+
+      const response = await apiClient.post<PaymentResponse>('/payment/initiate', paymentData);
+
+      if (!response.success) {
+        throw new Error(response.message || 'Wallet payment failed');
+      }
+
+      if (response.data.payment_reference) {
+        await verifyAndComplete(response.data.payment_reference);
+      } else {
+        throw new Error('No payment reference returned');
+      }
+
+    } catch (error: any) {
+      throw error;
+    }
+  };
+
+  const verifyAndComplete = async (paymentReference: string) => {
+    try {
+      const verificationData = {
+        payment_reference: paymentReference,
+        gateway: paymentMethod === 'credits' ? 'internal' : selectedGateway,
+        transaction_id: transactionId,
+      };
+
+      const response = await apiClient.post<PaymentResponse>('/payment/verify', verificationData);
+
+      if (!response.success) {
+        throw new Error(response.message || 'Payment verification failed');
+      }
+
       setIsProcessing(false);
       setShowSuccess(true);
-    } catch (error) {
-      setIsProcessing(false);
-      console.error('Purchase failed:', error);
-      // TODO: Show error message
+
+      if (refreshUser) {
+        await refreshUser();
+      }
+
+    sessionStorage.setItem('refresh_orders', 'true');
+
+    } catch (error: any) {
+      throw error;
     }
+  };
+
+  const handleExternalPayment = async () => {
+    try {
+      const paymentData = {
+        transaction_id: transactionId,
+        gateway: selectedGateway,
+        return_url: `${window.location.origin}/payment/success?transaction=${transactionId}`,
+        cancel_url: `${window.location.origin}/payment/cancel?transaction=${transactionId}`,
+        description: `Plan Purchase - ${plan?.name}`,
+        customer_email: user?.email,
+        customer_name: user?.name,
+        currency: 'USD',
+        metadata: {
+          user_id: user?.id,
+          type: 'plan_purchase',
+          plan_id: plan?.id,
+        },
+        payment_method_id: selectedPaymentMethodId || undefined,
+      };
+
+      const response = await apiClient.post<PaymentResponse>('/payment/initiate', paymentData);
+
+      if (!response.success) {
+        throw new Error(response.message || 'Payment initiation failed');
+      }
+
+      if (response.data.action_data?.client_secret) {
+        await handleStripePayment(response.data.action_data.client_secret);
+        return;
+      }
+
+      if (response.data.payment_reference) {
+        await verifyAndComplete(response.data.payment_reference);
+      } else if (response.data.redirect_url) {
+        window.location.href = response.data.redirect_url;
+      }
+
+    } catch (error: any) {
+      throw error;
+    }
+  };
+
+  const handleStripePayment = async (clientSecret: string) => {
+    try {
+      const stripeGateway = gateways.find(g => g.name === 'stripe');
+      const publishableKey = stripeGateway?.config?.public_key;
+
+      if (!publishableKey) {
+        throw new Error('Stripe configuration missing');
+      }
+
+      const stripe = await loadStripe(publishableKey) as any;
+
+      if (selectedPaymentMethodId) {
+        const { error, paymentIntent } = await stripe.confirmCardPayment(
+          clientSecret,
+          {
+            payment_method: selectedPaymentMethodId,
+            return_url: `${window.location.origin}/payment/success?transaction=${transactionId}`,
+          }
+        );
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        if (paymentIntent?.status === 'succeeded' && paymentIntent.id) {
+          await verifyAndComplete(paymentIntent.id);
+        } else if (paymentIntent?.status === 'requires_action') {
+          const { error: confirmError } = await stripe.handleCardAction(clientSecret);
+
+          if (confirmError) {
+            throw new Error(confirmError.message);
+          }
+
+          await verifyAndComplete(paymentIntent.id);
+        } else if (paymentIntent?.status === 'requires_payment_method') {
+          throw new Error('Payment method is required. Please select a payment method.');
+        }
+      } else {
+        throw new Error('No payment method selected');
+      }
+
+    } catch (error: any) {
+      throw error;
+    }
+  };
+
+  const loadStripe = async (publishableKey: string): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      if (window.Stripe) {
+        resolve(window.Stripe(publishableKey));
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://js.stripe.com/v3/';
+      script.async = true;
+      script.onload = () => {
+        if (window.Stripe) {
+          resolve(window.Stripe(publishableKey));
+        } else {
+          reject(new Error('Stripe failed to load'));
+        }
+      };
+      script.onerror = (error) => {
+        reject(new Error(`Failed to load Stripe: ${error}`));
+      };
+      document.head.appendChild(script);
+    });
   };
 
   const handleSuccessClose = () => {
     setShowSuccess(false);
-    history.push('/orders');
+    history.push(RouteName.ORDERS, {
+      purchase: {
+        transaction_id: transactionId,
+        amount: totalPrice,
+        product_name: plan?.name,
+        date: new Date().toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+      }
+    });
   };
-
-  const paymentMethods = [
-    { 
-      id: 'credits', 
-      name: 'Wallet Balance', 
-      icon: wallet, 
-      description: `Available: $${userCredits.toFixed(2)}` 
-    },
-  ];
 
   // Loading state
   if (loading) {
@@ -235,6 +637,18 @@ const CheckoutPage: React.FC = () => {
       </IonHeader>
 
       <IonContent fullscreen>
+        {/* Error Message */}
+        {error && (
+          <div className="ion-padding">
+            <IonCard color="danger">
+              <IonCardContent>
+                <IonIcon icon={warning} slot="start" />
+                <IonText color="light">{error}</IonText>
+              </IonCardContent>
+            </IonCard>
+          </div>
+        )}
+
         {/* Operator Info (if available) */}
         {operator && (
           <IonCard className="operator-card">
@@ -274,7 +688,7 @@ const CheckoutPage: React.FC = () => {
               </IonItem>
 
               {/* Pricing Breakdown */}
-              {plan.discount_percentage < 0 && (
+              {plan.discount_percentage > 0 && (
                 <>
                   <IonItem>
                     <IonLabel color="medium">Original Price</IonLabel>
@@ -292,7 +706,7 @@ const CheckoutPage: React.FC = () => {
                   </IonItem>
                 </>
               )}
-              
+
               <IonItem className="total-item">
                 <IonLabel>
                   <h2><strong>Total Amount</strong></h2>
@@ -304,10 +718,10 @@ const CheckoutPage: React.FC = () => {
             </IonList>
 
             {/* Discount Badge */}
-            {plan.discount_percentage < 0 && (
+            {plan.discount_percentage > 0 && (
               <div className="ion-text-center ion-margin-top">
                 <IonBadge color="danger">
-                  <IonIcon icon={pricetagOutline} /> 
+                  <IonIcon icon={pricetagOutline} />
                   Save ${(plan.base_price - plan.actual_price).toFixed(2)}
                 </IonBadge>
               </div>
@@ -355,51 +769,195 @@ const CheckoutPage: React.FC = () => {
             <IonCardTitle>Payment Method</IonCardTitle>
           </IonCardHeader>
           <IonCardContent>
-            <IonList>
-              {paymentMethods.map((method) => (
-                <IonItem 
-                  key={method.id} 
-                  lines="none"
-                  className={`payment-method-item ${paymentMethod === method.id ? 'selected' : ''}`}
-                  onClick={() => setPaymentMethod(method.id)}
-                >
-                  <IonIcon 
-                    slot="start" 
-                    icon={method.icon} 
-                    color={paymentMethod === method.id ? 'primary' : 'medium'}
-                  />
-                  <IonLabel>
-                    <h2>{method.name}</h2>
-                    <p>{method.description}</p>
-                  </IonLabel>
-                  <IonIcon 
-                    slot="end" 
-                    icon={checkmarkCircle} 
-                    color={paymentMethod === method.id ? 'primary' : 'medium'}
-                  />
-                </IonItem>
-              ))}
-            </IonList>
+            <IonRadioGroup
+              value={paymentMethod}
+              onIonChange={e => {
+                const newMethod = e.detail.value as 'credits' | 'external';
+                setPaymentMethod(newMethod);
+                if (newMethod === 'credits') {
+                  setError('');
+                }
+              }}
+            >
+              <IonList>
+                {paymentMethods.map((method) => (
+                  <IonItem
+                    key={method.id}
+                    lines="none"
+                    className={`payment-method-item ${paymentMethod === method.id ? 'selected' : ''}`}
+                    disabled={method.disabled}
+                  >
+                    <IonIcon
+                      slot="start"
+                      icon={method.icon}
+                      color={paymentMethod === method.id ? 'primary' : (method.disabled ? 'medium' : 'dark')}
+                    />
+                    <IonLabel>
+                      <h2>{method.name}</h2>
+                      <p>{method.description}</p>
+                      {method.disabled && method.id === 'credits' && (
+                        <p style={{ color: 'var(--ion-color-danger)', fontSize: '0.8em', marginTop: '4px' }}>
+                          Insufficient balance
+                        </p>
+                      )}
+                      {method.disabled && method.id === 'external' && gateways.length === 0 && (
+                        <p style={{ color: 'var(--ion-color-warning)', fontSize: '0.8em', marginTop: '4px' }}>
+                          No payment gateways available
+                        </p>
+                      )}
+                    </IonLabel>
+                    <IonRadio
+                      slot="end"
+                      value={method.id}
+                      disabled={method.disabled}
+                    />
+                  </IonItem>
+                ))}
+              </IonList>
+            </IonRadioGroup>
 
-            {/* Credits Warning */}
-            {paymentMethod === 'credits' && !hasEnoughCredits && (
-              <div className="credits-warning ion-margin-top">
-                <IonText color="danger">
-                  <p>
-                    <IonIcon icon={wallet} /> 
-                    Insufficient balance. You need ${(totalPrice - userCredits).toFixed(2)} more.
-                  </p>
-                </IonText>
-                <IonButton 
-									routerLink={RouteName.CREDIT}
-                  expand="block" 
-                  fill="outline" 
-                  color="primary"
-                  size="small"
-                  className="ion-margin-top"
-                >
-                  Add Funds to Wallet
-                </IonButton>
+            {/* External Payment Gateway Selection */}
+            {paymentMethod === 'external' && (
+              <div className="external-payment-section">
+                <div className="ion-margin-top">
+                  <IonLabel>Select Payment Method</IonLabel>
+
+                  {gatewaysLoading ? (
+                    <div className="ion-text-center ion-padding">
+                      <IonSpinner name="crescent" />
+                      <p>Loading payment options...</p>
+                    </div>
+                  ) : gateways.length === 0 ? (
+                    <IonCard className="no-gateways-card ion-margin-top">
+                      <IonCardContent>
+                        <IonIcon icon={warning} color="warning" size="large" />
+                        <h3>No Payment Methods Available</h3>
+                        <p>Please try again later or use wallet payment.</p>
+                        <IonButton
+                          fill="outline"
+                          size="small"
+                          onClick={() => setPaymentMethod('credits')}
+                          className="ion-margin-top"
+                        >
+                          Use Wallet Instead
+                        </IonButton>
+                      </IonCardContent>
+                    </IonCard>
+                  ) : (
+                    <>
+                      <IonRadioGroup
+                        value={selectedGateway}
+                        onIonChange={e => {
+                          setSelectedGateway(e.detail.value);
+                          setSelectedPaymentMethodId('');
+                          setError('');
+                        }}
+                      >
+                        <IonList>
+                          {gateways.map((gateway) => (
+                            <IonItem
+                              key={gateway.id}
+                              button
+                              lines="full"
+                              disabled={gateway.disabled}
+                            >
+                              <IonIcon
+                                slot="start"
+                                icon={cardOutline}
+                                color={selectedGateway === gateway.name ? 'primary' : (gateway.disabled ? 'medium' : 'dark')}
+                              />
+                              <IonLabel>
+                                <h3>{gateway.display_name}</h3>
+                                <p>{gateway.description || `Pay with ${gateway.display_name}`}</p>
+                                {gateway.disabled && (
+                                  <p style={{ color: 'var(--ion-color-danger)', fontSize: '0.8em', marginTop: '4px' }}>
+                                    {gateway.disabled_reason || 'Currently unavailable'}
+                                  </p>
+                                )}
+                              </IonLabel>
+                              <IonRadio
+                                slot="end"
+                                value={gateway.name}
+                                disabled={gateway.disabled}
+                              />
+                            </IonItem>
+                          ))}
+                        </IonList>
+                      </IonRadioGroup>
+
+                      {selectedGateway && (
+                        <div className="selected-gateway-info ion-margin-top">
+                          <IonText color="medium">
+                            <small>
+                              Selected: <strong>{gateways.find(g => g.name === selectedGateway)?.display_name}</strong>
+                            </small>
+                          </IonText>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Stripe Payment Methods */}
+                {selectedGateway === 'stripe' && gateways.find(g => g.name === 'stripe') && (
+                  <div className="stripe-payment-methods ion-margin-top">
+                    <PaymentMethodComponent
+                      userEmail={user?.email || ''}
+                      onMethodSelected={setSelectedPaymentMethodId}
+                      gatewayConfig={gateways.find(g => g.name === 'stripe')?.config}
+                      showAddButton={true}
+                      onPaymentMethodAdded={(newMethodId: any) => {
+                        setSelectedPaymentMethodId(newMethodId);
+                      }}
+                    />
+
+                    {!selectedPaymentMethodId && (
+                      <div className="payment-method-warning ion-margin-top">
+                        <IonText color="warning">
+                          <small>
+                            <IonIcon icon={warning} size="small" />
+                            Please select or add a payment method to continue
+                          </small>
+                        </IonText>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Other Gateway-specific messages */}
+                {selectedGateway && selectedGateway !== 'stripe' && (
+                  <div className="gateway-info ion-margin-top">
+                    <IonText color="medium">
+                      <p>
+                        You will be redirected to{' '}
+                        <strong>{gateways.find(g => g.name === selectedGateway)?.display_name}</strong>{' '}
+                        to complete your payment.
+                      </p>
+                    </IonText>
+                  </div>
+                )}
+
+                {/* Credits Warning */}
+                {!hasEnoughCredits && (
+                  <div className="credits-suggestion ion-margin-top">
+                    <IonText color="medium">
+                      <p>
+                        <IonIcon icon={wallet} />
+                        Not enough credits? You can add funds to your wallet.
+                      </p>
+                    </IonText>
+                    <IonButton
+                      routerLink={RouteName.CREDIT}
+                      expand="block"
+                      fill="outline"
+                      color="primary"
+                      size="small"
+                      className="ion-margin-top"
+                    >
+                      Add Funds to Wallet
+                    </IonButton>
+                  </div>
+                )}
               </div>
             )}
           </IonCardContent>
@@ -420,17 +978,21 @@ const CheckoutPage: React.FC = () => {
 
         {/* Checkout Button */}
         <div className="checkout-button ion-padding">
-          <IonButton 
-            expand="block" 
+          <IonButton
+            expand="block"
             size="large"
             color="primary"
             onClick={handleCheckout}
-            disabled={paymentMethod === 'credits' && !hasEnoughCredits}
+            disabled={
+              isProcessing ||
+              (paymentMethod === 'credits' && !hasEnoughCredits) ||
+              (paymentMethod === 'external' && (!selectedGateway || (selectedGateway === 'stripe' && !selectedPaymentMethodId)))
+            }
           >
             <IonIcon slot="start" icon={cash} />
-            Complete Purchase - ${totalPrice.toFixed(2)}
+            {isProcessing ? 'Processing...' : `Complete Purchase - $${totalPrice.toFixed(2)}`}
           </IonButton>
-          
+
           <div className="terms-notice ion-text-center ion-margin-top">
             <IonText color="medium">
               <small>

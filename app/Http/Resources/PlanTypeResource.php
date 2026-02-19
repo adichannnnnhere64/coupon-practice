@@ -18,6 +18,8 @@ class PlanTypeResource extends JsonResource
             'slug' => $this->slug,
             'description' => $this->description,
             'is_active' => $this->is_active,
+            'category_id' => $this->category_id,
+            'category' => new CategoryResource($this->whenLoaded('category')),
             'plans_count' => $this->whenLoaded('plans', fn() => $this->plans->count()),
             'plan_types' => PlanResource::collection($this->whenLoaded('plans')),
             'image' => $this->getFirstMediaUrl('images'),

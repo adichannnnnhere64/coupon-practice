@@ -1,0 +1,30 @@
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-md);
+  padding: 0 var(--spacing-md);
+
+  &__text {
+    flex: 1;
+  }
+
+  &__title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--gray-dark);
+    margin: 0;
+  }
+
+  &__subtitle {
+    font-size: 0.875rem;
+    color: var(--gray-medium);
+    margin: 4px 0 0 0;
+  }
+
+  &__action {
+    --color: var(--blue-primary);
+    font-weight: 500;
+    font-size: 0.875rem;
+  }
+}

@@ -58,9 +58,10 @@
 
 // Ensure tabs stay on top
 ion-tab-bar {
-  --background: var(--ion-color-primary);
-  --color: var(--ion-color-tertiary);
-  --color-selected: var(--ion-color-white);
+  --background: var(--white);
+  --color: var(--gray-medium);
+  --color-selected: var(--blue-primary);
+  border-top: 1px solid var(--gray-border);
 }
 
 // Select Item indicator
@@ -75,8 +76,164 @@ ion-tab-button {
   }
 
   &.tab-selected::before {
-    background-color: var(--ion-color-white);
+    background-color: var(--blue-primary);
   }
 }
 
-  
+// Loading spinner styles
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+  gap: var(--spacing-md);
+
+  &--full-page {
+    height: 100%;
+    min-height: 300px;
+  }
+
+  &__message {
+    color: var(--gray-medium);
+    font-size: 0.875rem;
+    margin: 0;
+  }
+}
+
+// Empty state styles
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  text-align: center;
+
+  &__icon {
+    font-size: 64px;
+    color: var(--gray-medium);
+    margin-bottom: var(--spacing-md);
+  }
+
+  &__title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gray-dark);
+    margin: 0 0 var(--spacing-sm) 0;
+  }
+
+  &__description {
+    font-size: 0.875rem;
+    color: var(--gray-medium);
+    margin: 0 0 var(--spacing-md) 0;
+    max-width: 300px;
+  }
+}
+
+// Error state styles
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  text-align: center;
+
+  &__icon {
+    font-size: 64px;
+    margin-bottom: var(--spacing-md);
+  }
+
+  &__title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gray-dark);
+    margin: 0 0 var(--spacing-sm) 0;
+  }
+
+  &__message {
+    font-size: 0.875rem;
+    color: var(--gray-medium);
+    margin: 0 0 var(--spacing-md) 0;
+    max-width: 400px;
+  }
+}
+
+// Price display styles
+.price-display {
+  &--small {
+    .price-display__current {
+      font-size: 1rem;
+    }
+    .price-display__original {
+      font-size: 0.75rem;
+    }
+  }
+
+  &--medium {
+    .price-display__current {
+      font-size: 1.25rem;
+    }
+    .price-display__original {
+      font-size: 0.875rem;
+    }
+  }
+
+  &--large {
+    .price-display__current {
+      font-size: 1.75rem;
+    }
+    .price-display__original {
+      font-size: 1rem;
+    }
+  }
+
+  &__original {
+    color: var(--gray-medium);
+    text-decoration: line-through;
+  }
+
+  &__current {
+    font-weight: 700;
+    color: var(--blue-primary);
+  }
+
+  &__savings {
+    margin-top: 2px;
+  }
+}
+
+
+
+// Credit chip styling for mobile header
+.credit-chip {
+  --background: rgba(255, 255, 255, 0.2);
+  --color: white;
+  height: 32px;
+  font-weight: 500;
+  margin: 0;
+  cursor: pointer;
+
+  ion-icon {
+    color: white;
+    margin-right: 4px;
+  }
+
+  ion-label {
+    color: white;
+    font-weight: 600;
+  }
+
+  // Add hover effect
+  &:hover {
+    --background: rgba(255, 255, 255, 0.3);
+  }
+
+  // Active/pressed state
+  &:active {
+    --background: rgba(255, 255, 255, 0.4);
+  }
+}
+
+

@@ -14,6 +14,9 @@ class PlanTypeInfolist
     {
         return $schema
             ->components([
+                TextEntry::make('category.name')
+                    ->label('Category')
+                    ->placeholder('-'),
                 TextEntry::make('name'),
                 TextEntry::make('slug'),
                 TextEntry::make('description')

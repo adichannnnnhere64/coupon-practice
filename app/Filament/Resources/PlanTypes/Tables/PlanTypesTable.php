@@ -19,6 +19,10 @@ class PlanTypesTable
     {
         return $table
             ->columns([
+                TextColumn::make('category.name')
+                    ->label('Category')
+                    ->sortable()
+                    ->searchable(),
                 TextColumn::make('name')
                     ->searchable(),
                 TextColumn::make('slug')

@@ -1,0 +1,185 @@
+.plan-card {
+  margin: 0;
+  --background: var(--white);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+
+  &__image {
+    position: relative;
+    width: 100%;
+    height: 160px;
+    overflow: hidden;
+    background: var(--gray-light);
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+
+    &:hover img {
+      transform: scale(1.05);
+    }
+  }
+
+  &__placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--blue-primary) 0%, var(--accent-indigo) 100%);
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--white);
+    text-transform: uppercase;
+  }
+
+  &__badges {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  &__discount {
+    font-weight: 600;
+  }
+
+  &__type {
+    margin-left: auto;
+  }
+
+  &__title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gray-dark);
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  &__subtitle {
+    font-size: 0.875rem;
+    color: var(--gray-medium);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  &__content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding-top: 0;
+  }
+
+  &__attributes {
+    flex: 1;
+    margin-bottom: var(--spacing-sm);
+  }
+
+  &__attribute {
+    display: flex;
+    gap: 4px;
+    font-size: 0.8rem;
+    color: var(--gray-medium);
+    margin-bottom: 2px;
+
+    &-name {
+      font-weight: 500;
+    }
+
+    &-value {
+      color: var(--gray-dark);
+    }
+  }
+
+  &__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+  }
+
+  &__pricing {
+    .price-display {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+
+      &__original {
+        font-size: 0.875rem;
+        color: var(--gray-medium);
+        text-decoration: line-through;
+      }
+
+      &__current {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--blue-primary);
+      }
+    }
+  }
+
+  &__stock {
+    .stock-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      padding: 4px 8px;
+
+      ion-icon {
+        font-size: 14px;
+      }
+    }
+  }
+
+  &__button {
+    margin-top: auto;
+    --border-radius: var(--radius-md);
+    font-weight: 500;
+  }
+}
+
+// Compact variant
+.plan-card--compact {
+  .plan-card__image {
+    height: 120px;
+  }
+
+  .plan-card__attributes {
+    display: none;
+  }
+
+  .plan-card__title {
+    font-size: 0.9rem;
+  }
+}
+
+// List variant
+.plan-card--list {
+  flex-direction: row;
+
+  .plan-card__image {
+    width: 120px;
+    height: auto;
+    min-height: 120px;
+  }
+
+  .plan-card__content {
+    padding: var(--spacing-md);
+  }
+}

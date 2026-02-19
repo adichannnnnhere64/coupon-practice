@@ -6,9 +6,11 @@ use Adichan\Payment\Interfaces\PaymentServiceInterface;
 use Adichan\Payment\Models\PaymentGateway;
 use Adichan\Payment\Models\PaymentTransaction;
 use Adichan\Transaction\Models\Transaction;
+use Adichan\Wallet\Services\WalletService;
 use App\Http\Controllers\Controller;
 use App\Models\Plan;
 use App\Models\PlanInventory;
+use App\Models\User;
 use App\Services\InventoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,8 +23,11 @@ class PaymentController extends Controller
 {
     protected PaymentServiceInterface $paymentService;
 
-    public function __construct(PaymentServiceInterface $paymentService, protected InventoryService $inventoryService)
-    {
+    public function __construct(
+        PaymentServiceInterface $paymentService,
+        protected InventoryService $inventoryService,
+        protected WalletService $walletService
+    ) {
         $this->paymentService = $paymentService;
     }
 
@@ -705,6 +710,8 @@ public function verify(Request $request): JsonResponse
                             } elseif (!is_array($currentMetaData)) {
                                 $currentMetaData = [];
                             }
+                            \Log::info('bought by : ' . $transaction->transactionable_id);
+                            \Log::info(json_encode($transaction));
 
                             // Mark as SOLD (status = 3)
                             $inventoryItem->update([
@@ -747,6 +754,66 @@ public function verify(Request $request): JsonResponse
                     }
                 }
             }
+
+            // ============ ADD CREDITS FOR CREDIT PURCHASE ============
+            if (isset($metadata['type']) && $metadata['type'] === 'credit_purchase') {
+                // Get the user from the transactionable relationship
+                $user = User::find($transaction->transactionable_id);
+
+                if ($user) {
+                    // Check if credits were already added (prevent duplicate crediting)
+                    $transactionMetadata = $transaction->metadata ?? [];
+                    if (!isset($transactionMetadata['credits_added'])) {
+                        // For credit purchases, the amount equals the credits (1 USD = 1 Credit)
+                        $credits = (float) $transaction->total;
+
+                        \Log::info('Adding credits after payment verification', [
+                            'transaction_id' => $transaction->id,
+                            'user_id' => $user->id,
+                            'credits' => $credits,
+                            'gateway' => $gateway->name,
+                        ]);
+
+                        // Add credits to user's wallet
+                        $this->walletService->addFunds(
+                            $user,
+                            $credits,
+                            "Credits purchased via {$gateway->display_name} - \${$credits} (Transaction #{$transaction->id})",
+                            [
+                                'type' => 'credit_purchase',
+                                'transaction_id' => $transaction->id,
+                                'payment_reference' => $request->payment_reference,
+                                'gateway' => $gateway->name,
+                                'verified_at' => now()->toIso8601String(),
+                            ]
+                        );
+
+                        // Mark credits as added to prevent duplicate crediting
+                        $transaction->update([
+                            'metadata' => array_merge($transactionMetadata, [
+                                'credits_added' => $credits,
+                                'credits_added_at' => now()->toIso8601String(),
+                            ]),
+                        ]);
+
+                        \Log::info('Credits added successfully', [
+                            'transaction_id' => $transaction->id,
+                            'user_id' => $user->id,
+                            'credits' => $credits,
+                        ]);
+                    } else {
+                        \Log::info('Credits already added for this transaction', [
+                            'transaction_id' => $transaction->id,
+                            'credits_already_added' => $transactionMetadata['credits_added'],
+                        ]);
+                    }
+                } else {
+                    \Log::warning('User not found for credit purchase', [
+                        'transaction_id' => $transaction->id,
+                        'transactionable_id' => $transaction->transactionable_id,
+                    ]);
+                }
+            }
             // =========================================================================
         }
 
@@ -761,6 +828,7 @@ public function verify(Request $request): JsonResponse
                 'gateway' => $gateway->name,
                 'verification_data' => $verification->getVerificationData(),
                 'inventory_sold' => isset($inventoryItems) ? $inventoryItems->count() : 0,
+                'credits_added' => isset($credits) ? $credits : null,
             ],
         ]);
 
@@ -780,10 +848,6 @@ public function verify(Request $request): JsonResponse
     }
 }
 
-
-    /**
- * Verify internal (wallet) payment
- */
 protected function verifyInternalPayment(Request $request, $user, $gateway): JsonResponse
 {
     try {
@@ -836,15 +900,21 @@ protected function verifyInternalPayment(Request $request, $user, $gateway): Jso
 
         try {
             // For internal payments, the payment should have been completed during initiation
+            // Just mark it as verified
             $transaction->update([
                 'status' => 'completed',
                 'completed_at' => now(),
             ]);
 
             // Find or create payment record
-            $paymentRecord = PaymentTransaction::updateOrCreate(
-                ['transaction_id' => $transactionId],
-                [
+            $paymentRecord = PaymentTransaction::where('transaction_id', $transactionId)
+                ->where('gateway_name', 'internal')
+                ->first();
+
+            if (!$paymentRecord) {
+                // Create payment record if it doesn't exist
+                $paymentRecord = PaymentTransaction::create([
+                    'transaction_id' => $transactionId,
                     'gateway_id' => $gateway->id,
                     'gateway_name' => $gateway->name,
                     'gateway_transaction_id' => 'WALLET_' . $transactionId . '_' . time(),
@@ -860,52 +930,49 @@ protected function verifyInternalPayment(Request $request, $user, $gateway): Jso
                     ],
                     'verified_at' => now(),
                     'metadata' => $transaction->metadata ?? [],
-                ]
-            );
+                ]);
+            } else {
+                // Update existing payment record
+                $paymentRecord->update([
+                    'status' => 'completed',
+                    'verified_at' => now(),
+                ]);
+            }
 
-            // ============ SELL INVENTORY FOR WALLET PAYMENT ============
+            // SELL INVENTORY - Mark reserved inventory as sold for plan purchases
             $metadata = $transaction->metadata ?? [];
-
             if (isset($metadata['purchase_type']) && $metadata['purchase_type'] === 'plan_purchase') {
                 if (isset($metadata['reserved_inventory_ids']) && !empty($metadata['reserved_inventory_ids'])) {
 
+                        \Log::info('currently baby');
+                        \Log::info($user);
+
+                    // Get all reserved inventory items
                     $inventoryItems = PlanInventory::whereIn('id', $metadata['reserved_inventory_ids'])
                         ->where('status', PlanInventory::STATUS_RESERVED)
                         ->get();
 
-                    if ($inventoryItems->isNotEmpty()) {
+                    if ($inventoryItems->count() > 0) {
+                        // Mark each inventory item as sold
                         foreach ($inventoryItems as $inventoryItem) {
-                            $currentMetaData = $inventoryItem->meta_data;
+                            $inventoryItem->markAsSold($user->id);
 
-                            if (is_string($currentMetaData)) {
-                                $decoded = json_decode($currentMetaData, true);
-                                $currentMetaData = is_array($decoded) ? $decoded : [];
-                            } elseif (!is_array($currentMetaData)) {
-                                $currentMetaData = [];
-                            }
-
-                            $inventoryItem->update([
-                                'status' => PlanInventory::STATUS_SOLD,
+                            Log::info('Inventory sold via wallet payment', [
+                                'inventory_id' => $inventoryItem->id,
+                                'plan_id' => $inventoryItem->plan_id,
+                                'transaction_id' => $transaction->id,
                                 'user_id' => $user->id,
-                                'sold_at' => now(),
-                                'meta_data' => array_merge($currentMetaData, [
-                                    'sold_at' => now()->toIso8601String(),
-                                    'sale_metadata' => [
-                                        'transaction_id' => $transaction->id,
-                                        'gateway' => 'wallet',
-                                        'verified_at' => now()->toIso8601String(),
-                                    ],
-                                ]),
+                                'sold_at' => $inventoryItem->sold_at,
                             ]);
                         }
 
+                        // Update the plan inventory counts
                         if ($inventoryItems->first()->plan) {
                             $inventoryItems->first()->plan->updateInventoryCounts();
                         }
                     }
                 }
             }
-            // ==========================================================
 
             DB::commit();
 
@@ -931,6 +998,7 @@ protected function verifyInternalPayment(Request $request, $user, $gateway): Jso
     } catch (\Exception $e) {
         Log::error('Internal payment verification failed', [
             'transaction_id' => $request->transaction_id ?? null,
+            'payment_reference' => $request->payment_reference,
             'error' => $e->getMessage(),
             'trace' => $e->getTraceAsString(),
         ]);

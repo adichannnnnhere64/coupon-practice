@@ -1,0 +1,78 @@
+.category-list {
+  position: relative;
+
+  &--horizontal {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: 0 var(--spacing-md);
+  }
+
+  &__scroll {
+    display: flex;
+    gap: var(--spacing-md);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: var(--spacing-sm) 0;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+     &__item {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+
+    // Default for larger screens
+    min-width: 200px;
+    max-width: 280px;
+
+    @media (max-width: 768px) {
+      min-width: 85vw;  // Take up most of the viewport width
+      max-width: 90vw;  // Limit to 90% of viewport
+      width: 100%;      // Full width within container
+    }
+
+    @media (max-width: 480px) {
+      min-width: calc(100vw - 64px); // Account for padding
+      max-width: none;
+    }
+  }
+
+
+  &__scroll-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-full);
+    background: var(--white);
+    border: 1px solid var(--gray-border);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    flex-shrink: 0;
+
+    ion-icon {
+      font-size: 20px;
+      color: var(--gray-dark);
+    }
+
+    &:hover {
+      background: var(--gray-light);
+      box-shadow: var(--shadow-md);
+    }
+
+    @media (min-width: 768px) {
+      display: flex;
+    }
+  }
+
+  &--grid {
+    padding: 0 var(--spacing-md);
+  }
+}

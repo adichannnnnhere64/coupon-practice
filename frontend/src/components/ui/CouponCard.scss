@@ -1,0 +1,183 @@
+.coupon-card {
+  margin: 16px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+  &.coupon-unavailable {
+    opacity: 0.8;
+
+    .coupon-name,
+    .current-price {
+      color: var(--ion-color-medium);
+    }
+  }
+
+  &.low-stock {
+    border-left: 4px solid var(--ion-color-warning);
+  }
+
+  &.inactive-plan {
+    border-left: 4px solid var(--ion-color-medium);
+    background: rgba(var(--ion-color-medium-rgb), 0.05);
+  }
+}
+
+.coupon-card-header {
+  padding: 16px 16px 8px;
+
+  .header-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+    gap: 12px;
+
+    .title-section {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+
+      .coupon-name {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin: 0;
+        color: var(--ion-color-dark);
+      }
+
+      .discount-badge {
+        font-size: 0.75rem;
+        padding: 4px 8px;
+        border-radius: 4px;
+      }
+    }
+
+    .price-section {
+      text-align: right;
+      flex-shrink: 0;
+
+      .price-discounted {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+
+        .original-price {
+          font-size: 0.9rem;
+          color: var(--ion-color-medium);
+          text-decoration: line-through;
+        }
+
+        .current-price {
+          font-size: 1.3rem;
+          font-weight: 700;
+          color: var(--ion-color-primary);
+          line-height: 1.2;
+        }
+      }
+
+      .price-regular {
+        .current-price {
+          font-size: 1.3rem;
+          font-weight: 700;
+          color: var(--ion-color-primary);
+        }
+      }
+    }
+  }
+
+  .coupon-description {
+    font-size: 0.9rem;
+    color: var(--ion-color-medium);
+    margin: 0;
+    line-height: 1.4;
+  }
+}
+
+.coupon-card-content {
+  padding-top: 0;
+
+  .stock-status {
+    margin-bottom: 12px;
+
+    .stock-chip {
+      height: 24px;
+      font-size: 0.8rem;
+
+      ion-icon {
+        font-size: 14px;
+      }
+
+      ion-label {
+        font-size: 0.8rem;
+      }
+    }
+  }
+
+  .savings-text {
+    display: block;
+    margin: 8px 0 12px;
+    font-weight: 500;
+    color: var(--ion-color-success);
+
+    small {
+      font-size: 0.85rem;
+    }
+  }
+
+  .select-coupon-btn {
+    --border-radius: 8px;
+    height: 44px;
+    font-weight: 600;
+    margin: 8px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.9rem;
+  }
+
+  .coupon-metadata {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(var(--ion-color-medium-rgb), 0.2);
+
+    ion-icon {
+      font-size: 14px;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+
+    small {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--ion-color-medium);
+      font-size: 0.8rem;
+    }
+  }
+}
+
+// Responsive adjustments
+@media (min-width: 768px) {
+  .coupon-card {
+    margin: 16px auto;
+    max-width: 600px;
+
+    .coupon-card-header {
+      .header-top-row {
+        .title-section {
+          .coupon-name {
+            font-size: 1.3rem;
+          }
+        }
+
+        .price-section {
+          .price-discounted .current-price,
+          .price-regular .current-price {
+            font-size: 1.5rem;
+          }
+        }
+      }
+    }
+  }
+}
+

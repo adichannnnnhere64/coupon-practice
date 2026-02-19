@@ -1,24 +1,20 @@
-import { useState, useEffect } from 'react';
+import {  useEffect } from 'react';
 import {
-  IonCard,
-  IonCardContent,
-  IonCardHeader,
-  IonCardSubtitle,
-  IonCardTitle,
+  // IonCard,
+  // IonCardContent,
+  // IonCardHeader,
+  // IonCardSubtitle,
+  // IonCardTitle,
   IonContent,
   IonPage,
-  IonGrid,
-  IonRow,
-  IonCol,
+  // IonGrid,
+  // IonRow,
+  // IonCol,
   IonButton,
   IonIcon,
 } from '@ionic/react';
 import {
   chevronForward,
-  flame,
-  trendingUp,
-  shieldCheckmark,
-  cash,
 } from 'ionicons/icons';
 import './WelcomePage.scss';
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -26,26 +22,31 @@ import { Autoplay, Pagination, Navigation } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
 import 'swiper/css/navigation';
-import apiClient from '@services/APIService';
+// import apiClient from '@services/APIService';
+import { useCategories } from '@services/useApi';
+import { CategoryList } from '@components/categories';
+import { SectionHeader } from '@components/layout';
+import { useHistory } from 'react-router-dom';
 
 const WelcomePage: React.FC = () => {
+  const history = useHistory();
   // API-driven products (PlanTypes / Operators)
-  const [planTypes, setPlanTypes] = useState<any[]>([]);
+  // const [planTypes, setPlanTypes] = useState<any[]>([]);
+  const { data: categories, loading: categoriesLoading, error: categoriesError } = useCategories();
 
-  const getOperators = async () => {
-    try {
-      const result = await apiClient.getPlanTypes() as any;
-      if (result.success && result.data) {
-        setPlanTypes(result.data);
-        console.log(result.data); // this shows your Operator/Bagistix/Javelin data
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  // const getOperators = async () => {
+  //   try {
+  //     const result = await apiClient.getPlanTypes() as any;
+  //     if (result.success && result.data) {
+  //       setPlanTypes(result.data);
+  //     }
+  //   } catch (err) {
+  //     console.error(err);
+  //   }
+  // };
 
   useEffect(() => {
-    getOperators();
+    // getOperators();
   }, []);
 
   // Hero slides data
@@ -55,7 +56,7 @@ const WelcomePage: React.FC = () => {
       subtitle: 'Up to 50% Off',
       description: 'Discover amazing deals on top brands',
       color: 'primary',
-      bgColor: 'var(--ion-color-primary)',
+      bgColor: 'var(--blue-primary)',
       image: 'assets/slide1.jpg',
       buttonText: 'Shop Now',
     },
@@ -64,18 +65,10 @@ const WelcomePage: React.FC = () => {
       subtitle: 'On Orders Over $50',
       description: 'No minimum purchase required',
       color: 'success',
-      bgColor: 'var(--ion-color-success)',
+      bgColor: 'var(--accent-indigo)',
       image: 'assets/slide3.jpg',
       buttonText: 'Start Shopping',
     },
-  ];
-
-  // Features data
-  const features = [
-    { icon: shieldCheckmark, title: 'Secure Payment', description: '100% safe & secure transactions' },
-    { icon: cash, title: 'Money Back Guarantee', description: '30-day return policy' },
-    { icon: trendingUp, title: 'Best Prices', description: 'Price match guarantee' },
-    { icon: flame, title: 'Fast Delivery', description: 'Free shipping over $50' },
   ];
 
   return (
@@ -110,64 +103,26 @@ const WelcomePage: React.FC = () => {
           </Swiper>
         </section>
 
-        {/* Features Section */}
-        <section className="features-section ion-padding">
-          <IonGrid>
-            <IonRow>
-              {features.map((feature, index) => (
-                <IonCol size="6" sizeMd="3" key={index}>
-                  <div className="feature-card">
-                    <div className="feature-icon">
-                      <IonIcon icon={feature.icon} />
-                    </div>
-                    <h4>{feature.title}</h4>
-                    <p>{feature.description}</p>
-                  </div>
-                </IonCol>
-              ))}
-            </IonRow>
-          </IonGrid>
+        {/* Categories Section */}
+        <section className="categories-section">
+          <SectionHeader
+            title="Browse Categories"
+            subtitle="Explore our product categories"
+            actionLabel="View All"
+            onAction={() => history.push('/products')}
+          />
+          <CategoryList
+            categories={categories}
+            loading={categoriesLoading}
+            error={categoriesError}
+            variant="horizontal"
+            onCategoryClick={(category) => history.push(`/category/${category.id}`)}
+          />
         </section>
 
-        {/* Products Section (API-driven PlanTypes) */}
-        <section className="products-section ion-padding">
-          <div className="section-header">
-            <h2>Featured Operators</h2>
-            <IonButton fill="clear" color="primary">
-              View All <IonIcon slot="end" icon={chevronForward} />
-            </IonButton>
-          </div>
-
-          <IonGrid>
-            <IonRow>
-              {planTypes.map((plan) => (
-                <IonCol size="6" sizeMd="3" key={plan.id}>
-
-                  <IonCard button routerLink={`/operator/${plan.id}`}>
-                    <div className="product-image">
-                      <img src={plan.image} alt={plan.name} />
-                    </div>
-                    <IonCardHeader>
-                      <IonCardSubtitle>{plan.description}</IonCardSubtitle>
-                      <IonCardTitle>{plan.name}</IonCardTitle>
-                    </IonCardHeader>
-                    <IonCardContent>
-                      <div className="product-footer">
-                        <div className="product-price">
-                          <p>Plans: {plan.plans_count}</p>
-                        </div>
-                      </div>
-                    </IonCardContent>
-                  </IonCard>
-                </IonCol>
-              ))}
-            </IonRow>
-          </IonGrid>
-        </section>
       </IonContent>
     </IonPage>
   );
 };
 
 export default WelcomePage;
-

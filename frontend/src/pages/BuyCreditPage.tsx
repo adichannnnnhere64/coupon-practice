@@ -25,12 +25,12 @@ import {
   IonRadio,
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
-import { 
+import {
   cash,
-  shieldCheckmark,
+  // shieldCheckmark,
   // card,
   // logoPaypal,
-  flashOutline,
+  // flashOutline,
   arrowBack,
 } from 'ionicons/icons';
 import './BuyCreditsPage.scss';
@@ -79,12 +79,12 @@ const BuyCreditsPage: React.FC = () => {
       try {
         setLoading(true);
         const response = await apiClient.get<{ success: boolean; data: PaymentGateway[] }>('/payment/gateways');
-        
+
         if (response.success && response.data) {
-          const externalGateways = response.data.filter((g: PaymentGateway) => 
+          const externalGateways = response.data.filter((g: PaymentGateway) =>
             g.name !== 'internal' && g.is_external
           );
-          
+
           setGateways(externalGateways);
           if (externalGateways.length > 0) {
             const stripe = externalGateways.find((g: PaymentGateway) => g.name === 'stripe');
@@ -158,14 +158,14 @@ const BuyCreditsPage: React.FC = () => {
       };
 
       const transactionResponse = await apiClient.post<TransactionResponse>('/payment/transaction', transactionData);
-      
+
       if (!transactionResponse.success) {
         throw new Error(transactionResponse.message || 'Failed to create transaction');
       }
 
       setTransactionId(transactionResponse.data.transaction_id);
       setShowConfirmation(true);
-      
+
     } catch (error: any) {
       console.error('Transaction creation failed:', error);
       setError(error.message || 'Failed to start purchase process');
@@ -239,13 +239,13 @@ const handleConfirmPurchase = async (): Promise<void> => {
     // Get Stripe public key from gateway config
     const stripeGateway = gateways.find(g => g.name === 'stripe');
     const publishableKey = stripeGateway?.config?.public_key;
-    
+
     if (!publishableKey) {
       throw new Error('Stripe configuration missing');
     }
 
     const stripe = await loadStripe(publishableKey) as any;
-    
+
     if (selectedPaymentMethodId) {
       // Confirm payment with saved payment method
       const { error, paymentIntent } = await stripe.confirmCardPayment(
@@ -265,11 +265,11 @@ const handleConfirmPurchase = async (): Promise<void> => {
       } else if (paymentIntent?.status === 'requires_action') {
         // Handle 3D Secure authentication
         const { error: confirmError } = await stripe.handleCardAction(clientSecret);
-        
+
         if (confirmError) {
           throw new Error(confirmError.message);
         }
-        
+
         // After action is complete, verify the payment
         await verifyAndComplete(paymentIntent.id);
       } else if (paymentIntent?.status === 'requires_payment_method') {
@@ -289,7 +289,7 @@ const handleConfirmPurchase = async (): Promise<void> => {
 };
 
   // const handleStripeConfirmation = async (
-  //   responseData: PaymentResponse['data'], 
+  //   responseData: PaymentResponse['data'],
   //   clientSecret: string
   // ): Promise<void> => {
   //   try {
@@ -371,7 +371,7 @@ const handleConfirmPurchase = async (): Promise<void> => {
 
       setIsProcessing(false);
       setShowSuccess(true);
-      
+
       if (refreshUser) {
         await refreshUser();
       }
@@ -411,13 +411,13 @@ const handleConfirmPurchase = async (): Promise<void> => {
 
 const handleSuccessClose = (): void => {
   setShowSuccess(false);
-  
+
   // Pass purchase details to thank you page
   const purchaseDetails = {
     transaction_id: transactionId,
     amount: purchaseAmount,
     credits: purchaseAmount, // 1 USD = 1 Credit
-    payment_method: selectedGateway === 'stripe' 
+    payment_method: selectedGateway === 'stripe'
       ? 'Stripe •••• (last 4 digits from payment method)'
       :  'Credit Card',
     date: new Date().toLocaleDateString('en-US', {
@@ -432,7 +432,7 @@ const handleSuccessClose = (): void => {
     user_email: (user as User)?.email,
     user_name: (user as User)?.name,
   };
-  
+
   history.push(RouteName.THANKYOU, { purchase: purchaseDetails });
 };
 
@@ -440,15 +440,11 @@ const handleSuccessClose = (): void => {
     if (selectedGateway === 'stripe' && !selectedPaymentMethodId) {
       return (
         <div className="stripe-card-element" style={{ marginTop: '15px' }}>
-          <div id="card-element" style={{ 
-            padding: '12px', 
-            border: '1px solid #ccc', 
+          <div id="card-element" style={{
+            padding: '12px',
             borderRadius: '8px',
             margin: '10px 0'
           }} />
-          <p style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
-            Your card details are secured by Stripe and never touch our servers.
-          </p>
         </div>
       );
     }
@@ -523,7 +519,6 @@ const handleSuccessClose = (): void => {
         <IonCard className="balance-card">
           <IonCardContent>
             <div className="balance-info">
-              <IonIcon icon={flashOutline} color="primary" />
               <div>
                 <p className="balance-label">Current Balance</p>
                 <h2 className="balance-amount">{userCredits.toFixed(2)} Credits</h2>
@@ -606,8 +601,8 @@ const handleSuccessClose = (): void => {
             <IonCardTitle>Payment Gateway</IonCardTitle>
           </IonCardHeader>
           <IonCardContent>
-            <IonRadioGroup 
-              value={selectedGateway} 
+            <IonRadioGroup
+              value={selectedGateway}
               onIonChange={e => {
                 setSelectedGateway(e.detail.value);
                 setSelectedPaymentMethodId(''); // Reset payment method when gateway changes
@@ -616,12 +611,12 @@ const handleSuccessClose = (): void => {
             >
               <IonList lines="none">
                 {gateways.map((gateway) => (
-                  <IonItem 
-                    key={gateway.id} 
+                  <IonItem
+                    key={gateway.id}
                     className={`payment-method-item ${selectedGateway === gateway.name ? 'selected' : ''}`}
                   >
-                    <IonIcon 
-                      slot="start" 
+                    <IonIcon
+                      slot="start"
                       color={selectedGateway === gateway.name ? 'primary' : 'medium'}
                     />
                     <IonLabel>
@@ -644,21 +639,21 @@ const handleSuccessClose = (): void => {
           </IonCardContent>
         </IonCard>
 
-        <IonCard className="security-card">
-          <IonCardContent>
-            <IonItem lines="none" className="security-item">
-              <IonIcon slot="start" icon={shieldCheckmark} color="success" />
-              <IonLabel>
-                <h3>Secure Payment</h3>
-                <p>Your payment information is encrypted and secure</p>
-              </IonLabel>
-            </IonItem>
-          </IonCardContent>
-        </IonCard>
+        {/* <IonCard className="security-card"> */}
+        {/*   <IonCardContent> */}
+        {/*     <IonItem lines="none" className="security-item"> */}
+        {/*       <IonIcon slot="start" icon={shieldCheckmark} color="success" /> */}
+        {/*       <IonLabel> */}
+        {/*         <h3>Secure Payment</h3> */}
+        {/*         <p>Your payment information is encrypted and secure</p> */}
+        {/*       </IonLabel> */}
+        {/*     </IonItem> */}
+        {/*   </IonCardContent> */}
+        {/* </IonCard> */}
 
         <div className="purchase-section">
-          <IonButton 
-            expand="block" 
+          <IonButton
+            expand="block"
             size="large"
             color="primary"
             onClick={handleCheckout}
@@ -668,7 +663,7 @@ const handleSuccessClose = (): void => {
             <IonIcon slot="start" icon={cash} />
             {purchaseAmount > 0 ? `Buy ${purchaseAmount.toFixed(2)} Credits` : 'Enter Amount'}
           </IonButton>
-          
+
           <div className="terms-notice">
             <IonText color="medium">
               <small>

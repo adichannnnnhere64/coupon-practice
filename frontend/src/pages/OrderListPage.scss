@@ -5,14 +5,14 @@
       text-align: center;
       padding: 15px;
       border-radius: 12px;
-      
+
       h3 {
         margin: 0;
         font-size: 1.8rem;
         font-weight: bold;
         color: var(--ion-color-primary);
       }
-      
+
       p {
         margin: 5px 0 0;
         color: var(--ion-color-medium);
@@ -23,11 +23,11 @@
 
   .controls-section {
     background: var(--ion-color-light);
-    
+
     .action-buttons {
       display: flex;
       gap: 10px;
-      
+
       ion-button {
         margin: 0;
       }
@@ -37,20 +37,20 @@
   .orders-table {
     .table-responsive {
       overflow-x: auto;
-      
+
       @media (max-width: 767px) {
         margin: 0 -16px;
         padding: 0 16px;
       }
     }
-    
+
     table.orders-table {
       width: 100%;
       border-collapse: collapse;
-      
+
       thead {
         background: var(--ion-color-light);
-        
+
         th {
           padding: 15px;
           text-align: left;
@@ -58,44 +58,44 @@
           color: var(--ion-color-dark);
           border-bottom: 2px solid var(--ion-color-medium);
           white-space: nowrap;
-          
+
           &:first-child {
             border-top-left-radius: 8px;
           }
-          
+
           &:last-child {
             border-top-right-radius: 8px;
           }
         }
       }
-      
+
       tbody {
         tr {
           border-bottom: 1px solid var(--ion-color-light);
-          
+
           &:hover {
             background: rgba(var(--ion-color-primary-rgb), 0.05);
           }
-          
+
           &:last-child {
             border-bottom: none;
           }
         }
-        
+
         td {
           padding: 15px;
           vertical-align: middle;
-          
+
           .customer-email {
             margin: 4px 0 0;
             font-size: 0.85rem;
             color: var(--ion-color-medium);
           }
-          
+
           ion-badge {
             font-size: 0.8rem;
             padding: 4px 8px;
-            
+
             ion-icon {
               font-size: 12px;
               margin-right: 4px;
@@ -114,11 +114,11 @@
       align-items: center;
       gap: 10px;
       margin-bottom: 15px;
-      
+
       .page-numbers {
         display: flex;
         gap: 5px;
-        
+
         ion-text {
           padding: 0 10px;
           display: flex;
@@ -126,7 +126,7 @@
         }
       }
     }
-    
+
     .pagination-info {
       text-align: center;
       color: var(--ion-color-medium);
@@ -141,13 +141,13 @@
       align-items: center;
       flex-wrap: wrap;
       gap: 20px;
-      
+
       h3 {
         margin: 0 0 5px;
         font-size: 1.2rem;
         color: var(--ion-color-dark);
       }
-      
+
       p {
         margin: 0;
         color: var(--ion-color-medium);
@@ -158,18 +158,18 @@
 
   .no-results {
     padding: 40px 20px;
-    
+
     ion-icon {
       font-size: 64px;
       color: var(--ion-color-medium);
       margin-bottom: 20px;
     }
-    
+
     h3 {
       margin: 10px 0;
       color: var(--ion-color-dark);
     }
-    
+
     p {
       color: var(--ion-color-medium);
       margin-bottom: 20px;
@@ -183,14 +183,14 @@
     .orders-table {
       table.orders-table {
         display: block;
-        
+
         thead {
           display: none;
         }
-        
+
         tbody {
           display: block;
-          
+
           tr {
             display: block;
             margin-bottom: 15px;
@@ -198,14 +198,14 @@
             border: 1px solid var(--ion-color-light);
             border-radius: 8px;
           }
-          
+
           td {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 8px 0;
             border-bottom: 1px solid var(--ion-color-light);
-            
+
             &:before {
               content: attr(data-label);
               font-weight: 600;
@@ -213,7 +213,7 @@
               margin-right: 10px;
               min-width: 100px;
             }
-            
+
             &:last-child {
               border-bottom: none;
             }
@@ -221,5 +221,66 @@
         }
       }
     }
+  }
+}
+
+.inventory-items-section {
+  margin-top: 16px;
+
+  h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.inventory-item {
+  --padding-start: 8px;
+  --padding-end: 8px;
+  --padding-top: 12px;
+  --padding-bottom: 12px;
+
+  h3 {
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+
+    strong {
+      font-family: monospace;
+      background: var(--ion-color-light);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+  }
+
+  p {
+    font-size: 0.8rem;
+    color: var(--ion-color-medium);
+  }
+}
+
+.inventory-actions {
+  display: flex;
+  gap: 4px;
+
+  ion-button {
+    margin: 0;
+    --padding-start: 8px;
+    --padding-end: 8px;
+    height: 32px;
+  }
+}
+
+.orders-table {
+  td {
+    vertical-align: middle;
+  }
+
+  .digital-items-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
   }
 }

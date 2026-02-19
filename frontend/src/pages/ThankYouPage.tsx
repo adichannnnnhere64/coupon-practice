@@ -12,27 +12,29 @@ import {
   IonCardTitle,
   IonIcon,
   IonText,
-  IonButton,
+  // IonButton,
   IonGrid,
   IonRow,
   IonCol,
   IonLabel,
   IonList,
   IonItem,
+  IonButton,
 } from '@ionic/react';
 import { useHistory, useLocation } from 'react-router-dom';
-import { 
+import {
   checkmarkCircle,
   home,
   receipt,
-  card,
-  flashOutline,
+  // card,
+  // flashOutline,
   calendar,
   person,
 } from 'ionicons/icons';
 import './ThankYouPage.scss';
 import { useAuth } from '@services/useApi';
 import { RouteName } from '@utils/RouteName';
+// import { RouteName } from '@utils/RouteName';
 
 interface PurchaseDetails {
   transaction_id: string | number;
@@ -54,9 +56,10 @@ const ThankYouPage: React.FC = () => {
 
   useEffect(() => {
     // Get purchase details from location state or query params
+        //
     const state = location.state as { purchase?: PurchaseDetails };
     const searchParams = new URLSearchParams(location.search);
-    
+
     if (state?.purchase) {
       setPurchaseDetails(state.purchase);
       setLoading(false);
@@ -76,7 +79,7 @@ const ThankYouPage: React.FC = () => {
       // You would normally fetch from your API
       // const response = await apiClient.get(`/payment/transactions/${transactionId}`);
       // setPurchaseDetails(response.data);
-      
+
       // For demo, create mock data
       const mockDetails: PurchaseDetails = {
         transaction_id: transactionId,
@@ -95,7 +98,7 @@ const ThankYouPage: React.FC = () => {
         user_email: user?.email || 'customer@example.com',
         user_name: user?.name || 'Customer',
       };
-      
+
       setPurchaseDetails(mockDetails);
     } catch (error) {
       console.error('Failed to fetch purchase details:', error);
@@ -107,15 +110,15 @@ const ThankYouPage: React.FC = () => {
   const handleGoHome = () => {
     history.push(RouteName.WELCOME);
   };
-
-  const handleViewReceipt = () => {
-    // Implement receipt viewing/download
-    console.log('View receipt for:', purchaseDetails?.transaction_id);
-  };
-
-  const handleBuyMore = () => {
-    history.push(RouteName.CREDIT);
-  };
+  //
+  // const handleViewReceipt = () => {
+  //   // Implement receipt viewing/download
+  //   console.log('View receipt for:', purchaseDetails?.transaction_id);
+  // };
+  //
+  // const handleBuyMore = () => {
+  //   history.push(RouteName.CREDIT);
+  // };
 
   if (loading) {
     return (
@@ -143,7 +146,7 @@ const ThankYouPage: React.FC = () => {
           <div className="success-icon">
             <IonIcon icon={checkmarkCircle} />
           </div>
-          
+
           <h1 className="thank-you-title">Thank You!</h1>
           <p className="thank-you-subtitle">
             Your purchase has been completed successfully
@@ -162,24 +165,24 @@ const ThankYouPage: React.FC = () => {
               </IonCardHeader>
               <IonCardContent>
                 <IonList lines="none" className="summary-list">
-                  <IonItem className="summary-item">
-                    <IonIcon icon={flashOutline} slot="start" color="primary" />
-                    <IonLabel>
-                      <h3>Credits Purchased</h3>
-                      <p>{purchaseDetails.credits.toFixed(2)} Credits</p>
-                    </IonLabel>
-                    <IonText slot="end" className="amount-text">
-                      <strong>${purchaseDetails.amount.toFixed(2)}</strong>
-                    </IonText>
-                  </IonItem>
-
-                  <IonItem className="summary-item">
-                    <IonIcon icon={card} slot="start" color="primary" />
-                    <IonLabel>
-                      <h3>Payment Method</h3>
-                      <p>{purchaseDetails.payment_method}</p>
-                    </IonLabel>
-                  </IonItem>
+                  {/* <IonItem className="summary-item"> */}
+                  {/*   <IonIcon icon={flashOutline} slot="start" color="primary" /> */}
+                  {/*   <IonLabel> */}
+                  {/*     <h3>Credits Purchased</h3> */}
+                  {/*     <p>{purchaseDetails.credits.toFixed(2)} Credits</p> */}
+                  {/*   </IonLabel> */}
+                  {/*   <IonText slot="end" className="amount-text"> */}
+                  {/*     <strong>${purchaseDetails.amount.toFixed(2)}</strong> */}
+                  {/*   </IonText> */}
+                  {/* </IonItem> */}
+                  {/**/}
+                  {/* <IonItem className="summary-item"> */}
+                  {/*   <IonIcon icon={card} slot="start" color="primary" /> */}
+                  {/*   <IonLabel> */}
+                  {/*     <h3>Payment Method</h3> */}
+                  {/*     <p>{purchaseDetails.payment_method}</p> */}
+                  {/*   </IonLabel> */}
+                  {/* </IonItem> */}
 
                   <IonItem className="summary-item">
                     <IonIcon icon={calendar} slot="start" color="primary" />
@@ -246,34 +249,34 @@ const ThankYouPage: React.FC = () => {
             </IonCard>
 
             {/* Next Steps Card */}
-            <IonCard className="next-steps-card">
-              <IonCardContent>
-                <h3 className="next-steps-title">What happens next?</h3>
-                <ul className="steps-list">
-                  <li className="step-item">
-                    <div className="step-number">1</div>
-                    <div className="step-content">
-                      <strong>Credits added instantly</strong>
-                      <p>Your {purchaseDetails.credits.toFixed(2)} credits are now available in your account</p>
-                    </div>
-                  </li>
-                  <li className="step-item">
-                    <div className="step-number">2</div>
-                    <div className="step-content">
-                      <strong>Receipt emailed</strong>
-                      <p>A receipt has been sent to {purchaseDetails.user_email}</p>
-                    </div>
-                  </li>
-                  <li className="step-item">
-                    <div className="step-number">3</div>
-                    <div className="step-content">
-                      <strong>Start using credits</strong>
-                      <p>You can now use your credits for services on our platform</p>
-                    </div>
-                  </li>
-                </ul>
-              </IonCardContent>
-            </IonCard>
+            {/* <IonCard className="next-steps-card"> */}
+            {/*   <IonCardContent> */}
+            {/*     <h3 className="next-steps-title">What happens next?</h3> */}
+            {/*     <ul className="steps-list"> */}
+            {/*       <li className="step-item"> */}
+            {/*         <div className="step-number">1</div> */}
+            {/*         <div className="step-content"> */}
+            {/*           <strong>Credits added instantly</strong> */}
+            {/*           <p>Your {purchaseDetails.credits.toFixed(2)} credits are now available in your account</p> */}
+            {/*         </div> */}
+            {/*       </li> */}
+            {/*       <li className="step-item"> */}
+            {/*         <div className="step-number">2</div> */}
+            {/*         <div className="step-content"> */}
+            {/*           <strong>Receipt emailed</strong> */}
+            {/*           <p>A receipt has been sent to {purchaseDetails.user_email}</p> */}
+            {/*         </div> */}
+            {/*       </li> */}
+            {/*       <li className="step-item"> */}
+            {/*         <div className="step-number">3</div> */}
+            {/*         <div className="step-content"> */}
+            {/*           <strong>Start using credits</strong> */}
+            {/*           <p>You can now use your credits for services on our platform</p> */}
+            {/*         </div> */}
+            {/*       </li> */}
+            {/*     </ul> */}
+            {/*   </IonCardContent> */}
+            {/* </IonCard> */}
           </>
         )}
 
@@ -289,39 +292,39 @@ const ThankYouPage: React.FC = () => {
             Go to Home
           </IonButton>
 
-          <div className="secondary-buttons">
-            {purchaseDetails && (
-              <IonButton
-                fill="outline"
-                color="medium"
-                onClick={handleViewReceipt}
-                className="secondary-button"
-              >
-                <IonIcon slot="start" icon={receipt} />
-                View Receipt
-              </IonButton>
-            )}
-            
-            <IonButton
-              fill="outline"
-              color="primary"
-              onClick={handleBuyMore}
-              className="secondary-button"
-            >
-              Buy More Credits
-            </IonButton>
-          </div>
+          {/* <div className="secondary-buttons"> */}
+          {/*   {purchaseDetails && ( */}
+          {/*     <IonButton */}
+          {/*       fill="outline" */}
+          {/*       color="medium" */}
+          {/*       onClick={handleViewReceipt} */}
+          {/*       className="secondary-button" */}
+          {/*     > */}
+          {/*       <IonIcon slot="start" icon={receipt} /> */}
+          {/*       View Receipt */}
+          {/*     </IonButton> */}
+          {/*   )} */}
+          {/**/}
+          {/*   <IonButton */}
+          {/*     fill="outline" */}
+          {/*     color="primary" */}
+          {/*     onClick={handleBuyMore} */}
+          {/*     className="secondary-button" */}
+          {/*   > */}
+          {/*     Buy More Credits */}
+          {/*   </IonButton> */}
+          {/* </div> */}
         </div>
 
         {/* Help Section */}
-        <div className="help-section">
-          <p className="help-text">
-            Need help with your purchase?{' '}
-            <a href="/support" className="help-link">
-              Contact our support team
-            </a>
-          </p>
-        </div>
+        {/* <div className="help-section"> */}
+        {/*   <p className="help-text"> */}
+        {/*     Need help with your purchase?{' '} */}
+        {/*     <a href="/support" className="help-link"> */}
+        {/*       Contact our support team */}
+        {/*     </a> */}
+        {/*   </p> */}
+        {/* </div> */}
       </IonContent>
     </IonPage>
   );

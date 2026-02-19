@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\PlanTypes\Schemas;
 
+use App\Models\Category;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -15,6 +17,11 @@ class PlanTypeForm
     {
         return $schema
             ->components([
+                Select::make('category_id')
+                    ->label('Category')
+                    ->relationship('category', 'name')
+                    ->searchable()
+                    ->preload(),
                 TextInput::make('name')
                     ->required(),
                 TextInput::make('slug')

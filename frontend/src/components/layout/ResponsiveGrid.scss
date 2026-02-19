@@ -1,0 +1,29 @@
+.responsive-grid {
+  padding: 0;
+
+  ion-row {
+    margin: 0;
+  }
+
+  ion-col {
+    padding: 0;
+  }
+
+  &--gap-small {
+    ion-col {
+      padding: var(--spacing-xs);
+    }
+  }
+
+  &--gap-medium {
+    ion-col {
+      padding: var(--spacing-sm);
+    }
+  }
+
+  &--gap-large {
+    ion-col {
+      padding: var(--spacing-md);
+    }
+  }
+}

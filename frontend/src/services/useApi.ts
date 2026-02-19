@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import apiClient, {
+  Category,
   PlanType,
   Plan,
   User,
   PaginatedResponse,
-  // AuthResponse,
   LoginData,
   RegisterData,
 } from './APIService';
@@ -142,6 +142,151 @@ export function useAuth() {
     logout,
     refreshUser,
   };
+}
+
+// ============================================================================
+// CATEGORY HOOKS
+// ============================================================================
+
+/**
+ * Hook to fetch all categories
+ */
+export function useCategories() {
+  const [state, setState] = useState<{
+    data: Category[];
+    loading: boolean;
+    error: Error | null;
+  }>({
+    data: [],
+    loading: true,
+    error: null,
+  });
+
+  const refresh = useCallback(async () => {
+    try {
+      setState(prev => ({ ...prev, loading: true, error: null }));
+      const response = await apiClient.getCategories();
+      setState({
+        data: response.data,
+        loading: false,
+        error: null,
+      });
+    } catch (err) {
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error: err as Error,
+      }));
+    }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  return { ...state, refresh };
+}
+
+/**
+ * Hook to fetch a single category
+ */
+export function useCategory(id: number | null) {
+  const [state, setState] = useState<UseApiState<Category>>({
+    data: null,
+    loading: true,
+    error: null,
+  });
+
+  useEffect(() => {
+    if (!id) {
+      setState({ data: null, loading: false, error: null });
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchData = async () => {
+      try {
+        setState(prev => ({ ...prev, loading: true, error: null }));
+        const data = await apiClient.getCategory(id);
+
+        if (!cancelled) {
+          setState({ data, loading: false, error: null });
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setState({ data: null, loading: false, error: err as Error });
+        }
+      }
+    };
+
+    fetchData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  return state;
+}
+
+/**
+ * Hook to fetch plan types for a category
+ */
+export function useCategoryPlanTypes(categoryId: number | null) {
+  const [state, setState] = useState<{
+    category: Category | null;
+    planTypes: PlanType[];
+    loading: boolean;
+    error: Error | null;
+  }>({
+    category: null,
+    planTypes: [],
+    loading: true,
+    error: null,
+  });
+
+  useEffect(() => {
+    if (!categoryId) {
+      setState({ category: null, planTypes: [], loading: false, error: null });
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchData = async () => {
+      try {
+        setState(prev => ({ ...prev, loading: true, error: null }));
+        const data = await apiClient.getCategoryPlanTypes(categoryId);
+
+        if (!cancelled) {
+          setState({
+            category: data.category,
+            planTypes: data.plan_types,
+            loading: false,
+            error: null,
+          });
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setState({
+            category: null,
+            planTypes: [],
+            loading: false,
+            error: err as Error,
+          });
+        }
+      }
+    };
+
+    fetchData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [categoryId]);
+
+  return state;
 }
 
 // ============================================================================

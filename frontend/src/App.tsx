@@ -1,32 +1,33 @@
 import { IonReactRouter } from '@ionic/react-router';
 import WelcomePage from '@pages/WelcomePage';
-import { 
-  IonApp, 
-  setupIonicReact, 
-  IonTabBar, 
-  IonTabButton, 
-  IonIcon, 
-  IonLabel, 
-  IonRouterOutlet, 
-  IonTabs, 
-  IonButtons, 
-  IonChip, 
-  IonHeader, 
-  IonToolbar, 
-  IonMenuButton, 
-  IonTitle, 
+import {
+  IonApp,
+  setupIonicReact,
+  IonTabBar,
+  IonTabButton,
+  IonIcon,
+  IonLabel,
+  IonRouterOutlet,
+  IonTabs,
+  IonButtons,
+  IonChip,
+  IonHeader,
+  IonToolbar,
+  IonMenuButton,
+  IonTitle,
   IonButton
 } from '@ionic/react';
-import { 
-  home, 
-  cash, 
-  settings, 
-  list, 
-  walletOutline, 
-  logInOutline 
+import {
+  home,
+  cash,
+  settings,
+  list,
+  walletOutline,
+  logInOutline
 } from 'ionicons/icons';
 import ProductPage from '@pages/OperatorPage';
 import CheckoutPage from '@pages/CheckoutPage';
+import CategoryPage from '@pages/CategoryPage';
 import { Route } from 'react-router-dom';
 import { RouteName } from '@utils/RouteName';
 
@@ -124,9 +125,12 @@ const App: React.FC = () => {
               <Route exact path="/operator/:productId">
                 <ProductPage />
               </Route>
-            <Route exact path={RouteName.CREDIT}>
-              <BuyCreditsPage />
-            </Route>
+              <Route exact path="/category/:categoryId">
+                <CategoryPage />
+              </Route>
+              <Route exact path={RouteName.CREDIT}>
+                <BuyCreditsPage />
+              </Route>
 
               <Route exact path="/checkout/:productId">
                 <CheckoutPage />
@@ -191,15 +195,18 @@ const App: React.FC = () => {
             <Route exact path="/operator/:productId">
               <ProductPage />
             </Route>
+            <Route exact path="/category/:categoryId">
+              <CategoryPage />
+            </Route>
             <Route exact path={RouteName.CREDIT}>
               <BuyCreditsPage />
             </Route>
             <Route exact path="/checkout/:productId">
               <CheckoutPage />
             </Route>
-             <Route exact path={RouteName.THANKYOU}>
-                <ThankYouPage />
-              </Route>
+            <Route exact path={RouteName.THANKYOU}>
+              <ThankYouPage />
+            </Route>
           </IonRouterOutlet>
         )}
       </IonReactRouter>

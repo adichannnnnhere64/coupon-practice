@@ -129,7 +129,7 @@ export interface PaymentMethodComponentProps {
   userEmail: string;
   onMethodSelected?: (methodId: string) => void;
   showAddButton?: boolean;
-  onPaymentMethodAdded?: () => void;
+  onPaymentMethodAdded?: (newMethodId: any) => void;
   gatewayConfig?: {
     public_key?: string;
   };
