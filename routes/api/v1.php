@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\CouponController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\PaymentGatewayController;
 use App\Http\Controllers\Api\V1\PlanController;
@@ -124,7 +125,7 @@ Route::prefix('payment')->group(function () {
         Route::get('/cancel', [PaymentController::class, 'cancel'])
             ->name('payment.cancel');
 
-        Route::get('/success', [PaymentController::class, 'success'])
+        Route::get('/success', [PaymentController::class, 'paymentSuccess'])
             ->name('payment.success');
 
         // Admin routes
@@ -142,41 +143,35 @@ Route::prefix('payment')->group(function () {
 });
 
 
-Route::middleware('auth:sanctum')
-    ->get('/coupons/view/{inventory}', function (\App\Models\PlanInventory $inventory) {
-
-        abort_unless(auth()->id() === $inventory->user_id || auth()->id() === 1, 403);
-
-        $media = $inventory->getFirstMedia('coupon');
-        abort_unless($media, 404);
-
-        $mime = $media->mime_type;
-        abort_unless(
-            str_starts_with($mime, 'application/pdf') ||
-            str_starts_with($mime, 'image/'),
-            403
-        );
-
-        return response()->file($media->getPath(), [
-            'Content-Type' => $mime
-        ]);
-    })->name('coupons.view');
 
 
 Route::middleware('auth:sanctum')
-    ->get('/coupons/download/{inventory}', function (\App\Models\PlanInventory $inventory) {
+    ->prefix('coupons')
+    ->name('api.coupons.')
+    ->group(function () {
 
-        abort_unless(auth()->id() === $inventory->user_id || auth()->id() === 1, 403);
+        Route::get('/view/{inventory}', [CouponController::class, 'view'])
+            ->name('view');
 
-        $media = $inventory->getFirstMedia('coupon');
-        abort_unless($media, 404);
+        Route::get('/download/{inventory}', [CouponController::class, 'download'])
+            ->name('download');
+    });
 
-        return response()->download(
-            $media->getPath(),
-            $media->file_name,
-            ['Content-Type' => $media->mime_type]
-        );
-    })->name('coupons.download');
+
+
+Route::middleware(['web'])
+    ->prefix('admin/coupons')
+    ->name('admin.coupons.')
+    ->group(function () {
+
+        Route::get('/view/{inventory}', [CouponController::class, 'view'])
+            ->name('view');
+
+        Route::get('/download/{inventory}', [CouponController::class, 'download'])
+            ->name('download');
+    });
+
+
 
 
 // Protected routes with authenticated rate limiter (120/min)

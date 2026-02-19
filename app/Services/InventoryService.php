@@ -4,10 +4,7 @@ namespace App\Services;
 
 use App\Models\Plan;
 use App\Models\PlanInventory;
-use App\Models\Transaction;
-use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class InventoryService
 {
@@ -16,17 +13,14 @@ class InventoryService
      */
     public function validateAndReserve(Plan $plan, int $quantity = 1, array $metadata = []): array
     {
-        // Check if inventory is enabled
         if (!$plan->inventory_enabled) {
-            return []; // No inventory needed
+            return [];
         }
 
-        // Check available stock
         if (!$plan->hasAvailableInventory($quantity)) {
             throw new \Exception("Insufficient stock for plan: {$plan->name}. Available: {$plan->availableStock}, Requested: {$quantity}");
         }
 
-        // Reserve inventory
         return $plan->reserveInventory($quantity, $metadata);
     }
 
@@ -41,20 +35,12 @@ class InventoryService
 
         DB::transaction(function () use ($inventoryItems, $userId) {
             foreach ($inventoryItems as $item) {
-                // Make sure we have a PlanInventory model instance
                 if (is_array($item)) {
                     $item = PlanInventory::find($item['id'] ?? $item);
                 }
 
                 if ($item && $item->status === PlanInventory::STATUS_RESERVED) {
                     $item->markAsSold($userId);
-
-                    Log::info('Inventory item sold', [
-                        'inventory_id' => $item->id,
-                        'plan_id' => $item->plan_id,
-                        'user_id' => $userId,
-                        'sold_at' => $item->sold_at,
-                    ]);
                 }
             }
         });
@@ -71,18 +57,12 @@ class InventoryService
 
         DB::transaction(function () use ($inventoryItems) {
             foreach ($inventoryItems as $item) {
-                // Make sure we have a PlanInventory model instance
                 if (is_array($item)) {
                     $item = PlanInventory::find($item['id'] ?? $item);
                 }
 
                 if ($item && $item->status === PlanInventory::STATUS_RESERVED) {
                     $item->markAsAvailable();
-
-                    Log::info('Inventory item released', [
-                        'inventory_id' => $item->id,
-                        'plan_id' => $item->plan_id,
-                    ]);
                 }
             }
         });

@@ -52,6 +52,7 @@ import './OrderListPage.scss';
 // import { useHistory } from 'react-router-dom';
 import { useAuth } from '@services/useApi';
 import apiClient from '@services/APIService';
+import FileViewer from '@components/FileViewer';
 
 interface OrderItem {
   id: number;
@@ -150,6 +151,12 @@ const OrderListPage: React.FC = () => {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancellingOrderId, setCancellingOrderId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+
+ const [showFileViewer, setShowFileViewer] = useState<boolean>(false);
+  const [fileBlob, setFileBlob] = useState<Blob | null>(null);
+  const [fileMimeType, setFileMimeType] = useState<string>('');
+  const [fileName, setFileName] = useState<string>('');
 
  function getBaseUrl(): string {
     const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
@@ -502,30 +509,81 @@ useEffect(() => {
   // Order Details Modal
   const renderOrderDetailsModal = function () {
 
+//         const handleViewCoupon = async () => {
+//   const id = selectedOrder?.metadata?.reserved_inventory_ids?.[0];
+//   if (!id) return;
+//
+//   try {
+//     const response = await fetch(
+//       `${getBaseUrl()}/coupons/view/${id}`,
+//       {
+//         headers: {
+//           Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+//         },
+//       }
+//     );
+//
+//     if (!response.ok) throw new Error('Failed to fetch');
+//
+//     const blob = await response.blob();
+//     const url = window.URL.createObjectURL(blob);
+//     window.open(url, '_blank');
+//
+//   } catch (error) {
+//     console.error(error);
+//   }
+// };
+
+
+
         const handleViewCoupon = async () => {
-  const id = selectedOrder?.metadata?.reserved_inventory_ids?.[0];
-  if (!id) return;
+    const id = selectedOrder?.metadata?.reserved_inventory_ids?.[0];
+    if (!id) return;
 
-  try {
-    const response = await fetch(
-      `${getBaseUrl()}/coupons/view/${id}`,
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
-        },
-      }
-    );
+    try {
+      const response = await fetch(
+        `${getBaseUrl()}/coupons/view/${id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+          },
+        }
+      );
 
-    if (!response.ok) throw new Error('Failed to fetch');
+      if (!response.ok) throw new Error('Failed to fetch');
 
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    window.open(url, '_blank');
+      const blob = await response.blob();
+      const contentType = response.headers.get('content-type') || '';
 
-  } catch (error) {
-    console.error(error);
-  }
-};
+      // Determine file extension
+      let extension = 'bin';
+      if (contentType.includes('pdf')) extension = 'pdf';
+      else if (contentType.includes('image')) extension = contentType.split('/')[1];
+      else if (contentType.includes('text')) extension = 'txt';
+      else if (contentType.includes('json')) extension = 'json';
+
+      setFileBlob(blob);
+      setFileMimeType(contentType);
+      setFileName(`coupon-${id}.${extension}`);
+      setShowFileViewer(true);
+
+    } catch (error) {
+      console.error(error);
+      // Show error toast
+      // const toast = await toastController.create({
+      //   message: 'Failed to load coupon',
+      //   duration: 2000,
+      //   color: 'danger'
+      // });
+      // toast.present();
+    }
+  };
+
+  const handleCloseFileViewer = () => {
+    setShowFileViewer(false);
+  setLoading(false);
+    setFileBlob(null);
+  };
 
 
 //         const handleDownloadCoupon = async () => {
@@ -557,6 +615,7 @@ useEffect(() => {
 
   return (
 
+                    <>
 
     <IonModal isOpen={showOrderDetails} onDidDismiss={() => setShowOrderDetails(false)}>
       <IonHeader>
@@ -686,7 +745,18 @@ useEffect(() => {
           </div>
         )}
       </IonContent>
-    </IonModal> )
+    </IonModal>
+
+                   <FileViewer
+        isOpen={showFileViewer}
+        onClose={handleCloseFileViewer}
+        fileBlob={fileBlob}
+        fileName={fileName}
+        mimeType={fileMimeType}
+      />
+
+        </>
+        )
 
     };
 
