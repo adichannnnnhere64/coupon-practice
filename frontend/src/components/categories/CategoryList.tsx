@@ -71,7 +71,11 @@ const CategoryList: React.FC<CategoryListProps> = ({
   if (variant === 'horizontal') {
     return (
       <div className="category-list category-list--horizontal">
-        <button className="category-list__scroll-btn category-list__scroll-btn--left" onClick={() => scroll('left')}>
+        <button
+          className="category-list__scroll-btn category-list__scroll-btn--left"
+          onClick={() => scroll('left')}
+          aria-label="Scroll left"
+        >
           <IonIcon icon={chevronBack} />
         </button>
         <div className="category-list__scroll" ref={scrollRef}>
@@ -88,39 +92,42 @@ const CategoryList: React.FC<CategoryListProps> = ({
             </div>
           ))}
         </div>
-        <button className="category-list__scroll-btn category-list__scroll-btn--right" onClick={() => scroll('right')}>
+        <button
+          className="category-list__scroll-btn category-list__scroll-btn--right"
+          onClick={() => scroll('right')}
+          aria-label="Scroll right"
+        >
           <IonIcon icon={chevronForward} />
         </button>
       </div>
     );
   }
 
-    return (
-  <div className="category-list category-list--grid">
-    <ResponsiveGrid
-                 columns={{
-    xs: '12',   // 12/12 = 1 column on mobile
-    sm: '6',    // 6/12 = 2 columns on small tablets
-    md: '4',    // 4/12 = 3 columns on tablets
-    lg: '3'     // 3/12 = 4 columns on desktop
-  }}
-
-    >
-      {categories.map((category) => (
-        <CategoryCard
-          key={category.id}
-          id={category.id}
-          name={category.name}
-          description={category.description}
-          iconUrl={category.icon_url}
-          planTypesCount={category.plan_types_count}
-          onClick={onCategoryClick ? () => onCategoryClick(category) : undefined}
-        />
-      ))}
-    </ResponsiveGrid>
-  </div>
-);
-
+  // Grid variant - normal flow, no scrolling
+  return (
+    <div className="category-list category-list--grid">
+      <ResponsiveGrid
+        columns={{
+          xs: "1",     // 1 column on mobile (normal flow, no scroll)
+          sm: "2",      // 2 columns on small tablets
+          md: "3",      // 3 columns on tablets
+          lg: "4"       // 4 columns on desktop
+        }}
+      >
+        {categories.map((category) => (
+          <CategoryCard
+            key={category.id}
+            id={category.id}
+            name={category.name}
+            description={category.description}
+            iconUrl={category.icon_url}
+            planTypesCount={category.plan_types_count}
+            onClick={onCategoryClick ? () => onCategoryClick(category) : undefined}
+          />
+        ))}
+      </ResponsiveGrid>
+    </div>
+  );
 };
 
 export default CategoryList;

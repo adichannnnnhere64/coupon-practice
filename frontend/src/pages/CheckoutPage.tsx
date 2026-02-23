@@ -40,9 +40,10 @@ import {
 } from 'ionicons/icons';
 import './CheckoutPage.scss';
 import apiClient from '@services/APIService';
-import { useAuth } from '@services/useApi';
 import { RouteName } from '@utils/RouteName';
 import PaymentMethodComponent from '@components/PaymentMethodComponent';
+import { useAuth } from '@services/useApi';
+import { useProtectedRoute } from '@services/useProtectedRoute';
 
 interface PlanType {
   id: number;
@@ -96,82 +97,11 @@ interface PaymentResponse {
 }
 
 const CheckoutPage: React.FC = () => {
-
-
-    // Update your fetchGateways function in CheckoutPage.tsx:
-
-useEffect(() => {
-  const fetchGateways = async () => {
-    try {
-      setGatewaysLoading(true);
-      const response = await apiClient.get<{ success: boolean; data: any[] }>('/payment/gateways');
-
-      console.log('Gateways API Response:', response);
-
-      if (response.success && response.data) {
-        console.log('All gateways from API:', response.data);
-
-        // Fix: Handle undefined is_active by treating it as true
-        const externalGateways = response.data.filter(gateway => {
-          // If is_active is undefined, assume it's true (active)
-          const isActive = gateway.is_active === undefined ? true : Boolean(gateway.is_active);
-          const isNotInternal = gateway.name !== 'internal';
-          const isExternal = Boolean(gateway.is_external); // stripe shows is_external: true
-
-          console.log(`Gateway ${gateway.name}:`, {
-            isActive,
-            isNotInternal,
-            isExternal,
-            is_active_value: gateway.is_active,
-            is_external_value: gateway.is_external
-          });
-
-          return isActive && isNotInternal && isExternal;
-        });
-
-        console.log('External gateways for checkout:', externalGateways);
-
-        setGateways(externalGateways);
-
-        if (externalGateways.length > 0) {
-          const stripeGateway = externalGateways.find(g => g.name === 'stripe');
-          if (stripeGateway) {
-            console.log('Found Stripe gateway:', stripeGateway);
-            setSelectedGateway('stripe');
-          } else {
-            console.log('Stripe NOT found in filtered gateways');
-            setSelectedGateway(externalGateways[0].name);
-          }
-        } else {
-          console.warn('No external payment gateways available');
-          setError('No external payment methods available. Please use wallet payment or contact support.');
-        }
-      } else {
-        setError('Failed to load payment options. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error fetching gateways:', error);
-      setError('Failed to load payment options. Please try again.');
-    } finally {
-      setGatewaysLoading(false);
-    }
-  };
-
-  fetchGateways();
-}, []);
-
-
-  const { productId } = useParams<{ productId: string }>();
   const history = useHistory();
   const location = useLocation<LocationState>();
-  const { user, isAuthenticated, refreshUser } = useAuth();
+  const { productId } = useParams<{ productId: string }>();
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      history.replace('/');
-    }
-  }, [isAuthenticated, history]);
-
+  // All useState hooks first
   const [plan, setPlan] = useState<PlanType | null>(location.state?.plan || null);
   const [operator, setOperator] = useState<Operator | null>(location.state?.operator || null);
   const [loading, setLoading] = useState(!plan);
@@ -186,8 +116,26 @@ useEffect(() => {
   const [gateways, setGateways] = useState<any[]>([]);
   const [gatewaysLoading, setGatewaysLoading] = useState(false);
 
-  // Fetch plan data if not passed via location state
+  // All hooks next (useAuth, useProtectedRoute, useEffect)
+  const { user, refreshUser } = useAuth();
+
+  const { isChecking } = useProtectedRoute({
+    redirectTo: '/login',
+    errorMessage: 'You need to be logged in to access this page'
+  });
+
+  // Log isChecking changes
   useEffect(() => {
+    console.log('isChecking:', isChecking);
+  }, [isChecking]);
+
+  // Fetch plan data - only runs after auth check is complete
+  useEffect(() => {
+    // Don't run if auth is still checking
+    if (isChecking) {
+      return;
+    }
+
     const fetchPlanData = async () => {
       if (!plan && productId) {
         try {
@@ -227,10 +175,15 @@ useEffect(() => {
     };
 
     fetchPlanData();
-  }, [productId, plan]);
+  }, [productId, plan, isChecking]);
 
-  // Fetch available payment gateways
+  // Fetch available payment gateways - only runs after auth check is complete
   useEffect(() => {
+    // Don't run if auth is still checking
+    if (isChecking) {
+      return;
+    }
+
     const fetchGateways = async () => {
       try {
         setGatewaysLoading(true);
@@ -241,32 +194,42 @@ useEffect(() => {
         if (response.success && response.data) {
           console.log('All gateways from API:', response.data);
 
-          // Include ALL active gateways except internal
-          const externalGateways = response.data.filter(g =>
-            g.is_active && g.name !== 'internal'
-          );
+          // Fix: Handle undefined is_active by treating it as true
+          const externalGateways = response.data.filter(gateway => {
+            // If is_active is undefined, assume it's true (active)
+            const isActive = gateway.is_active === undefined ? true : Boolean(gateway.is_active);
+            const isNotInternal = gateway.name !== 'internal';
+            const isExternal = Boolean(gateway.is_external); // stripe shows is_external: true
+
+            console.log(`Gateway ${gateway.name}:`, {
+              isActive,
+              isNotInternal,
+              isExternal,
+              is_active_value: gateway.is_active,
+              is_external_value: gateway.is_external
+            });
+
+            return isActive && isNotInternal && isExternal;
+          });
 
           console.log('External gateways for checkout:', externalGateways);
 
           setGateways(externalGateways);
 
           if (externalGateways.length > 0) {
-            // Try to find Stripe first
             const stripeGateway = externalGateways.find(g => g.name === 'stripe');
             if (stripeGateway) {
+              console.log('Found Stripe gateway:', stripeGateway);
               setSelectedGateway('stripe');
-              console.log('Selected Stripe as default gateway');
             } else {
-              // Otherwise use the first available gateway
+              console.log('Stripe NOT found in filtered gateways');
               setSelectedGateway(externalGateways[0].name);
-              console.log('Selected first gateway:', externalGateways[0].name);
             }
           } else {
             console.warn('No external payment gateways available');
-            setError('No payment methods available. Please try again later.');
+            setError('No external payment methods available. Please use wallet payment or contact support.');
           }
         } else {
-          // console.error('Failed to fetch gateways:', response.message);
           setError('Failed to load payment options. Please try again.');
         }
       } catch (error) {
@@ -278,7 +241,7 @@ useEffect(() => {
     };
 
     fetchGateways();
-  }, []);
+  }, [isChecking]);
 
   const userCredits = parseFloat(user?.wallet_balance || '0');
   const totalPrice = plan?.actual_price || 0;
@@ -442,7 +405,7 @@ useEffect(() => {
         await refreshUser();
       }
 
-    sessionStorage.setItem('refresh_orders', 'true');
+      sessionStorage.setItem('refresh_orders', 'true');
 
     } catch (error: any) {
       throw error;
@@ -579,7 +542,21 @@ useEffect(() => {
     });
   };
 
-  // Loading state
+  // Conditional returns AFTER all hooks
+  if (isChecking) {
+    return (
+      <IonPage>
+        <IonContent className="ion-padding">
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+            <IonSpinner name="crescent" />
+            <IonLabel style={{ marginLeft: '10px' }}>Checking authentication...</IonLabel>
+          </div>
+        </IonContent>
+      </IonPage>
+    );
+  }
+
+  // Loading state for plan data
   if (loading) {
     return (
       <IonPage>

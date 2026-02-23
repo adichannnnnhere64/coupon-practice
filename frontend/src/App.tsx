@@ -43,6 +43,7 @@ import RegisterPage from '@pages/RegisterPage';
 import { useAuth } from '@services/useApi';
 import BuyCreditsPage from '@pages/BuyCreditPage';
 import ThankYouPage from '@pages/ThankYouPage';
+import { NotificationProvider } from '@components/NotificationProvider';
 
 let platformMode;
 
@@ -65,11 +66,13 @@ setupIonicReact({
 });
 
 const App: React.FC = () => {
+
   const isMobile = window.innerWidth < 768;
   const { isAuthenticated, user } = useAuth();
 
   return (
     <IonApp>
+      <NotificationProvider>
       <IonReactRouter>
         {/* Show header only on desktop */}
         {!isMobile && <AppHeader />}
@@ -143,10 +146,11 @@ const App: React.FC = () => {
                 <IonIcon aria-hidden="true" icon={home} />
                 <IonLabel>Home</IonLabel>
               </IonTabButton>
-              
+
               <IonTabButton tab="ui-components" href={RouteName.PRODUCTS}>
                 <IonIcon aria-hidden="true" icon={list} />
                 <IonLabel>Operators</IonLabel>
+
               </IonTabButton>
 
 
@@ -154,6 +158,7 @@ const App: React.FC = () => {
     <IonTabButton tab="integrations" href={RouteName.ORDERS}>
       <IonIcon icon={cash} />
       <IonLabel>Orders</IonLabel>
+
     </IonTabButton>
   ) : null}
 
@@ -210,6 +215,7 @@ const App: React.FC = () => {
           </IonRouterOutlet>
         )}
       </IonReactRouter>
+      </NotificationProvider>
     </IonApp>
   );
 };

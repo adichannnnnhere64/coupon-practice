@@ -53,6 +53,7 @@ import './OrderListPage.scss';
 import { useAuth } from '@services/useApi';
 import apiClient from '@services/APIService';
 import FileViewer from '@components/FileViewer';
+import { useHistory } from 'react-router';
 
 interface OrderItem {
   id: number;
@@ -117,9 +118,15 @@ const sortOptions = [
 ];
 
 const OrderListPage: React.FC = () => {
-  // const history = useHistory();
-  const { user } = useAuth();
-	console.log(user)
+  const {  isAuthenticated } = useAuth();
+  const history = useHistory();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      history.replace('/');
+    }
+  }, [isAuthenticated, history]);
+
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [stats, setStats] = useState<OrderStats>({

@@ -1,6 +1,7 @@
 .category-list {
   position: relative;
 
+  // Horizontal (scrollable) variant
   &--horizontal {
     display: flex;
     align-items: center;
@@ -16,32 +17,31 @@
     scrollbar-width: none;
     -ms-overflow-style: none;
     padding: var(--spacing-sm) 0;
+    flex: 1;
 
     &::-webkit-scrollbar {
       display: none;
     }
   }
 
-     &__item {
+  &__item {
     flex: 0 0 auto;
     scroll-snap-align: start;
 
-    // Default for larger screens
+    // For horizontal scroll on mobile
     min-width: 200px;
     max-width: 280px;
 
     @media (max-width: 768px) {
-      min-width: 85vw;  // Take up most of the viewport width
-      max-width: 90vw;  // Limit to 90% of viewport
-      width: 100%;      // Full width within container
+      min-width: 85vw;
+      max-width: 90vw;
     }
 
     @media (max-width: 480px) {
-      min-width: calc(100vw - 64px); // Account for padding
+      min-width: calc(100vw - 64px);
       max-width: none;
     }
   }
-
 
   &__scroll-btn {
     display: none;
@@ -72,7 +72,21 @@
     }
   }
 
+  // Grid variant - normal flow, no scrolling
   &--grid {
     padding: 0 var(--spacing-md);
+    width: 100%;
+
+    // Ensure the grid container doesn't create scroll
+    overflow: visible;
+
+    // Make sure ResponsiveGrid children flow normally
+    .responsive-grid {
+      display: flex;
+      flex-wrap: wrap;
+
+      // This ensures normal block flow instead of flex wrapping
+      // If ResponsiveGrid uses CSS Grid, this will be handled by the grid
+    }
   }
 }

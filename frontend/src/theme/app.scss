@@ -15,3 +15,54 @@ ion-tab-button.tab-selected ion-label {
   font-weight: 600;
 }
 
+
+/* theme/notification.css */
+.notification-toast {
+  --border-radius: 8px;
+  --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-weight: 500;
+}
+
+.mobile-toast {
+  --max-width: 90%;
+  margin: 0 auto;
+  font-size: 14px;
+}
+
+.desktop-toast {
+  --max-width: 400px;
+  font-size: 14px;
+  transition: transform 0.2s ease;
+}
+
+.desktop-toast:hover {
+  transform: translateY(-2px);
+  --box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.notification-success { --background: #10dc60; --color: white; }
+.notification-error { --background: #f04141; --color: white; }
+.notification-warning { --background: #ffce00; --color: #000; }
+.notification-info { --background: #3880ff; --color: white; }
+
+.notification-toast::part(button) {
+  color: white;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.notification-warning::part(button) { color: #000; }
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .notification-success { --background: #2dd36f; }
+  .notification-error { --background: #eb445a; }
+  .notification-warning { --background: #ffd534; }
+  .notification-info { --background: #3880ff; }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .desktop-toast { transition: none; }
+}

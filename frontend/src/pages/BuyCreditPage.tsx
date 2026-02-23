@@ -23,6 +23,7 @@ import {
   IonInput,
   IonRadioGroup,
   IonRadio,
+  useIonViewWillEnter,
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import {
@@ -59,7 +60,9 @@ const BuyCreditsPage: React.FC = () => {
     if (!isAuthenticated) {
       history.replace('/login');
     }
+
   }, [isAuthenticated, history]);
+
 
   const [amount, setAmount] = useState<string>('');
   const [gateways, setGateways] = useState<PaymentGateway[]>([]);
@@ -73,6 +76,27 @@ const BuyCreditsPage: React.FC = () => {
   const [transactionId, setTransactionId] = useState<string | number | null>(null);
 
   const quickAmounts: number[] = [10, 25, 50, 100, 250, 500];
+
+      // Ionic lifecycle - runs every time page enters
+  useIonViewWillEnter(() => {
+    // Reset form state
+    setAmount('');
+    setSelectedPaymentMethodId('');
+    setError('');
+    setTransactionId(null);
+
+    // Reset gateway to default
+    if (gateways.length > 0) {
+      const stripeGateway = gateways.find(g => g.name === 'stripe');
+      setSelectedGateway(stripeGateway ? stripeGateway.name : gateways[0].name);
+    }
+
+    // Check authentication
+    if (!isAuthenticated) {
+      history.replace('/login');
+    }
+  });
+
 
   useEffect(() => {
     const fetchGateways = async (): Promise<void> => {
@@ -432,6 +456,7 @@ const handleSuccessClose = (): void => {
     user_email: (user as User)?.email,
     user_name: (user as User)?.name,
   };
+
 
   history.push(RouteName.THANKYOU, { purchase: purchaseDetails });
 };

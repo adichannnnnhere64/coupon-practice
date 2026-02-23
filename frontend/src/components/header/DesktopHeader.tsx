@@ -22,8 +22,6 @@ const DesktopHeader: React.FC = () => {
   const [popoverEvent, setPopoverEvent] = useState<MouseEvent | null>(null);
   const { logout, isAuthenticated, user } = useAuth();
 
-	console.log(user)
-
   const handleLogout = async (): Promise<void> => {
     if (!isAuthenticated) return; // safety guard
 
@@ -46,7 +44,10 @@ const DesktopHeader: React.FC = () => {
           <IonButtons>
             <IonButton routerLink={RouteName.WELCOME}>Home</IonButton>
             <IonButton routerLink={RouteName.PRODUCTS}>Operators</IonButton>
+
+          {isAuthenticated ? (
             <IonButton routerLink={RouteName.ORDERS}>Orders</IonButton>
+            ): (<></>)}
           </IonButtons>
         </div>
 
