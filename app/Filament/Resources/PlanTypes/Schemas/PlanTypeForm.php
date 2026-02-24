@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\PlanTypes\Schemas;
 
-use App\Models\Category;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -17,9 +16,10 @@ class PlanTypeForm
     {
         return $schema
             ->components([
-                Select::make('category_id')
-                    ->label('Category')
-                    ->relationship('category', 'name')
+                Select::make('categories')
+                    ->label('Categories')
+                    ->relationship('categories', 'name')
+                    ->multiple()
                     ->searchable()
                     ->preload(),
                 TextInput::make('name')

@@ -20,12 +20,12 @@ class Category extends Model implements HasMedia
 
     public function planTypes()
     {
-        return $this->hasMany(PlanType::class);
+        return $this->belongsToMany(PlanType::class)->withTimestamps();
     }
 
     public function plans()
     {
-        return $this->hasManyThrough(Plan::class, PlanType::class);
+        return Plan::whereIn('plan_type_id', $this->planTypes()->pluck('plan_types.id'));
     }
 
     public function registerMediaCollections(): void
