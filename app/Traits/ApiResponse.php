@@ -3,7 +3,6 @@
 namespace App\Traits;
 
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Resources\Json\JsonResource;
 use Symfony\Component\HttpFoundation\Response;
 
 trait ApiResponse
@@ -74,5 +73,23 @@ trait ApiResponse
     protected function validationError(array $errors, string $message = 'Validation failed'): JsonResponse
     {
         return $this->error($message, Response::HTTP_UNPROCESSABLE_ENTITY, $errors);
+    }
+
+    protected function paginated(
+        mixed $resource,
+        string $message = 'Success'
+    ): JsonResponse {
+        if ($resource instanceof \Illuminate\Http\Resources\Json\ResourceCollection) {
+            return $resource->additional([
+                'success' => true,
+                'message' => $message,
+            ])->response();
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'data' => $resource,
+        ]);
     }
 }

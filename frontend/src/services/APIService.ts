@@ -397,10 +397,13 @@ class ApiClient {
     page?: number;
     per_page?: number;
     plan_type_id?: number;
+    category_id?: number;
     is_active?: boolean;
     min_price?: number;
     max_price?: number;
-    search?: string; 
+    search?: string;
+    sort_by?: 'name' | 'actual_price' | 'base_price' | 'created_at';
+    sort_order?: 'asc' | 'desc';
   }): Promise<PaginatedResponse<Plan>> {
     return await this.get<PaginatedResponse<Plan>>('/plans', { params });
   }

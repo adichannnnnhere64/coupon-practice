@@ -50,6 +50,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
   validityDays,
   onClick,
 }) => {
+
   const history = useHistory();
   const hasDiscount = basePrice > actualPrice;
   const discountPercentage = hasDiscount
@@ -65,6 +66,8 @@ const PlanCard: React.FC<PlanCardProps> = ({
   };
 
   const isOutOfStock = stockAvailable !== undefined && stockAvailable <= 0;
+
+
 
   return (
     <IonCard className="plan-card" button={!isOutOfStock} onClick={isOutOfStock ? undefined : handleClick}>

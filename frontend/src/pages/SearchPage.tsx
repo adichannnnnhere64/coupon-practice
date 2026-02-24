@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   IonPage,
   IonHeader,
@@ -26,24 +26,20 @@ import {
   IonInfiniteScroll,
   IonInfiniteScrollContent,
   IonBadge,
-  IonLoading,
+  IonSpinner,
+  IonSegment,
+  IonSegmentButton,
 } from '@ionic/react';
 import {
   search,
   chevronDown,
   flame,
+  closeCircle,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import './SearchPage.scss';
-import { usePlansQuery } from '@hooks/useQueries';
+import { usePlansQuery, usePlanTypesQuery, useCategoriesQuery } from '@hooks/useQueries';
 import { useDebounce } from '@hooks/useDebounce';
-
-const categories = [
-  { id: 'all', name: 'All Plans', count: 0 },
-  { id: '1', name: 'Operator', count: 0 },
-  { id: '2', name: 'Bagistix', count: 0 },
-  { id: '3', name: 'Javelin', count: 0 },
-];
 
 const priceRanges = [
   { label: 'Under $50', min: 0, max: 50 },
@@ -52,14 +48,28 @@ const priceRanges = [
   { label: '$200+', min: 200, max: 10000 },
 ];
 
+type SortOption = {
+  value: string;
+  label: string;
+  sort_by: 'name' | 'actual_price' | 'created_at';
+  sort_order: 'asc' | 'desc';
+};
+
+const sortOptions: SortOption[] = [
+  { value: 'newest', label: 'Newest', sort_by: 'created_at', sort_order: 'desc' },
+  { value: 'name', label: 'Name A-Z', sort_by: 'name', sort_order: 'asc' },
+  { value: 'price-low', label: 'Price: Low to High', sort_by: 'actual_price', sort_order: 'asc' },
+  { value: 'price-high', label: 'Price: High to Low', sort_by: 'actual_price', sort_order: 'desc' },
+];
+
 const SearchPage: React.FC = () => {
   const history = useHistory();
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters] = useState(false);
   const [priceRange, setPriceRange] = useState({ lower: 0, upper: 10000 });
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [activeFilter, setActiveFilter] = useState<boolean | null>(null);
-  const [sortBy, setSortBy] = useState('popular');
+  const [selectedPlanType, setSelectedPlanType] = useState<number | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [sortBy, setSortBy] = useState('newest');
   const [page, setPage] = useState(1);
   const [allPlans, setAllPlans] = useState<any[]>([]);
   const perPage = 12;
@@ -67,16 +77,26 @@ const SearchPage: React.FC = () => {
   // Debounce search query
   const debouncedSearch = useDebounce(searchQuery, 500);
 
+  // Fetch categories and plan types
+  const { data: categories, isLoading: categoriesLoading } = useCategoriesQuery();
+  const { data: planTypesData, isLoading: planTypesLoading } = usePlanTypesQuery({ per_page: 100 });
+  const planTypes = planTypesData?.data || [];
+
+  // Get current sort option
+  const currentSort = sortOptions.find(opt => opt.value === sortBy) || sortOptions[0];
+
   // Build query params
   const queryParams = useMemo(() => ({
     page,
     per_page: perPage,
     search: debouncedSearch || undefined,
-    plan_type_id: selectedCategory !== 'all' ? parseInt(selectedCategory) : undefined,
-    is_active: activeFilter !== null ? activeFilter : undefined,
+    plan_type_id: selectedPlanType || undefined,
+    category_id: selectedCategory || undefined,
     min_price: priceRange.lower > 0 ? priceRange.lower : undefined,
     max_price: priceRange.upper < 10000 ? priceRange.upper : undefined,
-  }), [page, debouncedSearch, selectedCategory, activeFilter, priceRange]);
+    sort_by: currentSort.sort_by,
+    sort_order: currentSort.sort_order,
+  }), [page, debouncedSearch, selectedPlanType, selectedCategory, priceRange, currentSort]);
 
   // Use React Query for fetching plans
   const { data, isLoading: loading, error, refetch } = usePlansQuery(queryParams);
@@ -84,54 +104,67 @@ const SearchPage: React.FC = () => {
   const plans = data?.data || [];
   const meta = data?.meta || null;
 
+  // Track previous filter state to detect changes
+  const filterKey = JSON.stringify({
+    search: debouncedSearch,
+    planType: selectedPlanType,
+    category: selectedCategory,
+    price: priceRange,
+    sort: sortBy
+  });
+  const prevFilterKeyRef = React.useRef(filterKey);
+
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    if (prevFilterKeyRef.current !== filterKey) {
+      prevFilterKeyRef.current = filterKey;
+      setPage(1);
+      setAllPlans([]);
+    }
+  }, [filterKey]);
+
   // Accumulate plans for infinite scroll
   React.useEffect(() => {
-    if (plans.length > 0) {
-      if (page === 1) {
-        setAllPlans(plans);
-      } else {
-        setAllPlans(prev => [...prev, ...plans]);
-      }
-    }
-  }, [plans, page]);
+    if (loading) return;
 
-  // Reset on filter change
-  React.useEffect(() => {
-    setPage(1);
-    setAllPlans([]);
-  }, [debouncedSearch, selectedCategory, activeFilter, priceRange]);
+    if (page === 1) {
+      setAllPlans(plans);
+    } else if (plans.length > 0) {
+      setAllPlans(prev => {
+        const existingIds = new Set(prev.map(p => p.id));
+        const newPlans = plans.filter((p: any) => !existingIds.has(p.id));
+        if (newPlans.length === 0) return prev;
+        return [...prev, ...newPlans];
+      });
+    }
+  }, [plans, page, loading]);
 
   // Handle infinite scroll
-  const handleInfiniteScroll = async (ev: any) => {
+  const handleInfiniteScroll = useCallback(async (ev: CustomEvent<void>) => {
     if (meta && meta.current_page < meta.last_page) {
       setPage(prev => prev + 1);
     }
-    ev.target.complete();
-  };
+    (ev.target as HTMLIonInfiniteScrollElement).complete();
+  }, [meta]);
 
-  const clearFilters = (): void => {
+  const clearFilters = useCallback((): void => {
     setSearchQuery('');
     setPriceRange({ lower: 0, upper: 10000 });
-    setSelectedCategory('all');
-    setActiveFilter(null);
-    setSortBy('popular');
+    setSelectedPlanType(null);
+    setSelectedCategory(null);
+    setSortBy('newest');
     setPage(1);
     setAllPlans([]);
-  };
+  }, []);
 
-  const handleViewPlan = (planId: number): void => {
-
+  const handleViewPlan = useCallback((planId: number): void => {
     history.push(`/checkout/${planId}`);
-  };
+  }, [history]);
 
-  // const formatPrice = (price: number): string => {
-  //   return `$${price.toFixed(2)}`;
-  // };
-
-  const getPlanTypeName = (planTypeId: number): string => {
-    const category = categories.find(cat => cat.id === planTypeId.toString());
-    return category ? category.name : 'Unknown';
-  };
+  const getPlanTypeName = useCallback((planTypeId: number): string => {
+    const planType = planTypes.find((pt: any) => pt.id === planTypeId);
+    return planType ? planType.name : 'Unknown';
+  }, [planTypes]);
 
   const getDiscountPercentage = (plan: any): number => {
     if (plan.base_price && plan.actual_price && plan.base_price > plan.actual_price) {
@@ -140,19 +173,10 @@ const SearchPage: React.FC = () => {
     return 0;
   };
 
-  // Sort plans locally
-  const sortedPlans = [...allPlans].sort((a, b) => {
-    switch (sortBy) {
-      case 'price-low':
-        return a.actual_price - b.actual_price;
-      case 'price-high':
-        return b.actual_price - a.actual_price;
-      case 'name':
-        return a.name.localeCompare(b.name);
-      default: // popular
-        return (b.is_active ? 1 : 0) - (a.is_active ? 1 : 0);
-    }
-  });
+  const hasActiveFilters = selectedPlanType !== null ||
+    selectedCategory !== null ||
+    priceRange.lower > 0 ||
+    priceRange.upper < 10000;
 
   return (
     <IonPage className="search-page">
@@ -163,40 +187,88 @@ const SearchPage: React.FC = () => {
       </IonHeader>
 
       <IonContent fullscreen>
-        <IonLoading isOpen={loading} message="Loading plans..." />
-
         {/* Search Bar */}
         <div className="search-container ion-padding">
           <IonSearchbar
             value={searchQuery}
-            onIonChange={(e) => setSearchQuery(e.detail.value || '')}
+            onIonInput={(e) => setSearchQuery(e.detail.value || '')}
             placeholder="Search plans by name or description..."
             animated
             showCancelButton="focus"
+            debounce={0}
           />
-          
+
           <div className="search-controls">
-            <IonButton 
-              fill="outline" 
+            <IonButton
+              fill="outline"
               size="small"
               onClick={clearFilters}
+              disabled={!hasActiveFilters && !searchQuery}
             >
               Clear All
             </IonButton>
-            
+
             <div className="sort-dropdown">
               <IonLabel>Sort by:</IonLabel>
-              <select 
+              <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 className="sort-select"
               >
-                <option value="popular">Most Popular</option>
-                <option value="name">Name A-Z</option>
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
+                {sortOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
+          </div>
+        </div>
+
+        {/* Category Filter Chips */}
+        <div className="category-chips ion-padding-horizontal">
+          <IonSegment
+            scrollable
+            value={selectedCategory?.toString() || 'all'}
+            onIonChange={(e) => setSelectedCategory(e.detail.value === 'all' ? null : Number(e.detail.value))}
+          >
+            <IonSegmentButton value="all">
+              <IonLabel>All</IonLabel>
+            </IonSegmentButton>
+            {categoriesLoading ? (
+              <IonSpinner name="dots" />
+            ) : (
+              categories?.map((category: any) => (
+                <IonSegmentButton key={category.id} value={category.id.toString()}>
+                  <IonLabel>{category.name}</IonLabel>
+                </IonSegmentButton>
+              ))
+            )}
+          </IonSegment>
+        </div>
+
+        {/* Plan Type Filter Chips */}
+        <div className="plan-type-chips ion-padding-horizontal ion-padding-top">
+          <div className="chips-scroll">
+            <IonChip
+              color={selectedPlanType === null ? 'primary' : 'medium'}
+              onClick={() => setSelectedPlanType(null)}
+            >
+              All Types
+            </IonChip>
+            {planTypesLoading ? (
+              <IonSpinner name="dots" />
+            ) : (
+              planTypes.map((planType: any) => (
+                <IonChip
+                  key={planType.id}
+                  color={selectedPlanType === planType.id ? 'primary' : 'medium'}
+                  onClick={() => setSelectedPlanType(planType.id)}
+                >
+                  {planType.name}
+                </IonChip>
+              ))
+            )}
           </div>
         </div>
 
@@ -236,6 +308,34 @@ const SearchPage: React.FC = () => {
                 </div>
               </IonAccordion>
 
+              {/* Plan Types */}
+              <IonAccordion value="planTypes">
+                <IonItem slot="header" color="light">
+                  <IonLabel>Plan Types</IonLabel>
+                  <IonIcon slot="end" icon={chevronDown} />
+                </IonItem>
+                <div className="ion-padding" slot="content">
+                  <IonList>
+                    <IonItem>
+                      <IonCheckbox
+                        checked={selectedPlanType === null}
+                        onIonChange={() => setSelectedPlanType(null)}
+                      />
+                      <IonLabel>All Plan Types</IonLabel>
+                    </IonItem>
+                    {planTypes.map((planType: any) => (
+                      <IonItem key={planType.id}>
+                        <IonCheckbox
+                          checked={selectedPlanType === planType.id}
+                          onIonChange={() => setSelectedPlanType(planType.id)}
+                        />
+                        <IonLabel>{planType.name}</IonLabel>
+                      </IonItem>
+                    ))}
+                  </IonList>
+                </div>
+              </IonAccordion>
+
               {/* Categories */}
               <IonAccordion value="categories">
                 <IonItem slot="header" color="light">
@@ -244,51 +344,22 @@ const SearchPage: React.FC = () => {
                 </IonItem>
                 <div className="ion-padding" slot="content">
                   <IonList>
-                    {categories.map(category => (
+                    <IonItem>
+                      <IonCheckbox
+                        checked={selectedCategory === null}
+                        onIonChange={() => setSelectedCategory(null)}
+                      />
+                      <IonLabel>All Categories</IonLabel>
+                    </IonItem>
+                    {categories?.map((category: any) => (
                       <IonItem key={category.id}>
                         <IonCheckbox
                           checked={selectedCategory === category.id}
                           onIonChange={() => setSelectedCategory(category.id)}
                         />
-                        <IonLabel>
-                          {category.name}
-                          <p>{category.count} items</p>
-                        </IonLabel>
+                        <IonLabel>{category.name}</IonLabel>
                       </IonItem>
                     ))}
-                  </IonList>
-                </div>
-              </IonAccordion>
-
-              {/* Status */}
-              <IonAccordion value="status">
-                <IonItem slot="header" color="light">
-                  <IonLabel>Status</IonLabel>
-                  <IonIcon slot="end" icon={chevronDown} />
-                </IonItem>
-                <div className="ion-padding" slot="content">
-                  <IonList>
-                    <IonItem>
-                      <IonCheckbox
-                        checked={activeFilter === null}
-                        onIonChange={() => setActiveFilter(null)}
-                      />
-                      <IonLabel>All Plans</IonLabel>
-                    </IonItem>
-                    <IonItem>
-                      <IonCheckbox
-                        checked={activeFilter === true}
-                        onIonChange={() => setActiveFilter(true)}
-                      />
-                      <IonLabel>Active Only</IonLabel>
-                    </IonItem>
-                    <IonItem>
-                      <IonCheckbox
-                        checked={activeFilter === false}
-                        onIonChange={() => setActiveFilter(false)}
-                      />
-                      <IonLabel>Inactive Only</IonLabel>
-                    </IonItem>
                   </IonList>
                 </div>
               </IonAccordion>
@@ -297,48 +368,58 @@ const SearchPage: React.FC = () => {
         )}
 
         {/* Active Filters */}
-        <div className="active-filters ion-padding">
-          <div className="filters-chips">
-            {selectedCategory !== 'all' && (
-              <IonChip onClick={() => setSelectedCategory('all')}>
-                Category: {getPlanTypeName(parseInt(selectedCategory))}
-                <IonIcon name="close-circle" />
-              </IonChip>
-            )}
-            {activeFilter !== null && (
-              <IonChip onClick={() => setActiveFilter(null)}>
-                Status: {activeFilter ? 'Active' : 'Inactive'}
-                <IonIcon name="close-circle" />
-              </IonChip>
-            )}
-            {(priceRange.lower > 0 || priceRange.upper < 10000) && (
-              <IonChip onClick={() => setPriceRange({ lower: 0, upper: 10000 })}>
-                Price: ${priceRange.lower} - ${priceRange.upper}
-                <IonIcon name="close-circle" />
-              </IonChip>
-            )}
+        {hasActiveFilters && (
+          <div className="active-filters ion-padding">
+            <div className="filters-chips">
+              {selectedPlanType !== null && (
+                <IonChip onClick={() => setSelectedPlanType(null)}>
+                  Type: {getPlanTypeName(selectedPlanType)}
+                  <IonIcon icon={closeCircle} />
+                </IonChip>
+              )}
+              {selectedCategory !== null && (
+                <IonChip onClick={() => setSelectedCategory(null)}>
+                  Category: {categories?.find((c: any) => c.id === selectedCategory)?.name}
+                  <IonIcon icon={closeCircle} />
+                </IonChip>
+              )}
+              {(priceRange.lower > 0 || priceRange.upper < 10000) && (
+                <IonChip onClick={() => setPriceRange({ lower: 0, upper: 10000 })}>
+                  Price: ${priceRange.lower} - ${priceRange.upper}
+                  <IonIcon icon={closeCircle} />
+                </IonChip>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Results Info */}
         <div className="results-info ion-padding">
           <h3>
-            {/* {meta?.total || 0} {meta?.total === 1 ? 'plan' : 'plans'} found */}
+            {meta?.total || 0} {meta?.total === 1 ? 'plan' : 'plans'} found
             {searchQuery && ` for "${searchQuery}"`}
           </h3>
-          {meta && (
+          {meta && meta.last_page > 1 && (
             <p className="page-info">
-              Page {meta.current_page} of {meta.last_page}
+              Showing {allPlans.length} of {meta.total}
             </p>
           )}
         </div>
+
+        {/* Loading State */}
+        {loading && page === 1 && (
+          <div className="loading-state ion-text-center ion-padding">
+            <IonSpinner name="crescent" />
+            <p>Loading plans...</p>
+          </div>
+        )}
 
         {/* Error State */}
         {error && (
           <div className="error-state ion-text-center ion-padding">
             <IonIcon icon={flame} size="large" color="danger" />
             <h3>Error Loading Plans</h3>
-            <p>{error.message}</p>
+            <p>{(error as Error).message}</p>
             <IonButton onClick={() => refetch()}>
               Try Again
             </IonButton>
@@ -346,125 +427,126 @@ const SearchPage: React.FC = () => {
         )}
 
         {/* Plans Grid */}
-        <div className="products-grid ion-padding">
-          <IonGrid>
-            <IonRow>
-              {sortedPlans.map(plan => {
-                const discount = getDiscountPercentage(plan);
-                return (
-                  <IonCol size="12" sizeMd="6" sizeLg="4" key={plan.id}>
-                    <IonCard className="plan-card" button onClick={() => handleViewPlan(plan.id)}>
-                      <div className="plan-image">
-                        { plan.plan_type?.image || plan.media && plan.media.length > 0 ? (
-                          <img 
-                            src={plan.plan_type?.image ?? ''} 
-                            alt={plan.name}
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="placeholder-image">
-                            {getPlanTypeName(plan.plan_type_id).charAt(0)}
+        {!loading || page > 1 ? (
+          <div className="products-grid ion-padding">
+            <IonGrid>
+              <IonRow>
+                {allPlans.map(plan => {
+                  const discount = getDiscountPercentage(plan);
+                  return (
+                    <IonCol size="12" sizeMd="6" sizeLg="4" key={plan.id}>
+                      <IonCard className="plan-card" button onClick={() => handleViewPlan(plan.id)}>
+                        <div className="plan-image">
+                          {plan.plan_type?.image || (plan.media && plan.media.length > 0) ? (
+                            <img
+                              src={plan.plan_type?.image || plan.media?.[0]?.url}
+                              alt={plan.name}
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="placeholder-image">
+                              {getPlanTypeName(plan.plan_type_id).charAt(0)}
+                            </div>
+                          )}
+
+                          <div className="plan-tags">
+                            {discount > 0 && (
+                              <IonBadge color="danger" className="discount-badge">
+                                {discount}% OFF
+                              </IonBadge>
+                            )}
+                            {!plan.is_active && (
+                              <IonBadge color="medium" className="status-badge">
+                                Inactive
+                              </IonBadge>
+                            )}
+                            <IonChip color="primary" className="category-chip">
+                              {getPlanTypeName(plan.plan_type_id)}
+                            </IonChip>
                           </div>
-                        )}
-                        
-                        <div className="plan-tags">
-                          {discount > 0 && (
-                            <IonBadge color="danger" className="discount-badge">
-                              {discount}% OFF
-                            </IonBadge>
-                          )}
-                          {!plan.is_active && (
-                            <IonBadge color="medium" className="status-badge">
-                              Inactive
-                            </IonBadge>
-                          )}
-                          <IonChip color="primary" className="category-chip">
-                            {getPlanTypeName(plan.plan_type_id)}
-                          </IonChip>
                         </div>
-                      </div>
-                      
-                      <IonCardHeader>
-                        <IonCardTitle>{plan.name}</IonCardTitle>
-                        <IonCardSubtitle>
-                          {plan.description || 'No description available'}
-                        </IonCardSubtitle>
-                      </IonCardHeader>
-                      
-                      <div className="plan-content">
-                        <div className="plan-attributes">
-                          {plan.attributes && plan.attributes.slice(0, 2).map((attr: any, idx: number) => (
-                            <div key={idx} className="attribute">
-                              <span className="attribute-name">{attr.name}:</span>
-                              <span className="attribute-value">{attr.value}</span>
-                            </div>
-                          ))}
-                          {plan.validity_days && (
-                            <div className="attribute">
-                              <span className="attribute-name">Validity:</span>
-                              <span className="attribute-value">{plan.validity_days} days</span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="plan-footer">
-                          <div className="price-section">
-                            {discount > 0 ? (
-                              <>
-                                <span className="original-price">
-                                  ${plan.base_price?.toFixed(2)}
-                                </span>
+
+                        <IonCardHeader>
+                          <IonCardTitle>{plan.name}</IonCardTitle>
+                          <IonCardSubtitle>
+                            {plan.description || 'No description available'}
+                          </IonCardSubtitle>
+                        </IonCardHeader>
+
+                        <div className="plan-content">
+                          <div className="plan-attributes">
+                            {plan.attributes && plan.attributes.slice(0, 2).map((attr: any, idx: number) => (
+                              <div key={idx} className="attribute">
+                                <span className="attribute-name">{attr.name}:</span>
+                                <span className="attribute-value">{attr.value}</span>
+                              </div>
+                            ))}
+                            {plan.validity_days && (
+                              <div className="attribute">
+                                <span className="attribute-name">Validity:</span>
+                                <span className="attribute-value">{plan.validity_days} days</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="plan-footer">
+                            <div className="price-section">
+                              {discount > 0 ? (
+                                <>
+                                  <span className="original-price">
+                                    ${plan.base_price?.toFixed(2)}
+                                  </span>
+                                  <h3 className="current-price">
+                                    ${plan.actual_price?.toFixed(2)}
+                                  </h3>
+                                </>
+                              ) : (
                                 <h3 className="current-price">
                                   ${plan.actual_price?.toFixed(2)}
                                 </h3>
-                              </>
-                            ) : (
-                              <h3 className="current-price">
-                                ${plan.actual_price?.toFixed(2)}
-                              </h3>
-                            )}
-                          </div>
-                          
-                          <div className="stock-info">
-                            {plan.stock_summary && (
-                              <>
-                                <IonBadge 
+                              )}
+                            </div>
+
+                            <div className="stock-info">
+                              {plan.stock_summary && (
+                                <IonBadge
                                   color={plan.stock_summary.available > 0 ? "success" : "danger"}
                                 >
                                   {plan.stock_summary.available} in stock
                                 </IonBadge>
-                              </>
-                            )}
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </IonCard>
-                  </IonCol>
-                );
-              })}
-            </IonRow>
-          </IonGrid>
+                      </IonCard>
+                    </IonCol>
+                  );
+                })}
+              </IonRow>
+            </IonGrid>
 
-          {/* Infinite Scroll */}
-          {meta && meta.current_page < meta.last_page && (
-            <IonInfiniteScroll onIonInfinite={handleInfiniteScroll}>
-              <IonInfiniteScrollContent
-                loadingText="Loading more plans..."
-              />
-            </IonInfiniteScroll>
-          )}
+            {/* Infinite Scroll */}
+            {meta && meta.current_page < meta.last_page && (
+              <IonInfiniteScroll onIonInfinite={handleInfiniteScroll}>
+                <IonInfiniteScrollContent
+                  loadingSpinner="crescent"
+                  loadingText="Loading more plans..."
+                />
+              </IonInfiniteScroll>
+            )}
 
-          {!loading && sortedPlans.length === 0 && !error && (
-            <div className="no-results ion-text-center ion-padding">
-              <IonIcon icon={search} size="large" />
-              <h3>No Plans Found</h3>
-              <p>Try adjusting your search or filters</p>
-              <IonButton onClick={clearFilters}>
-                Clear All Filters
-              </IonButton>
-            </div>
-          )}
-        </div>
+            {!loading && allPlans.length === 0 && !error && (
+              <div className="no-results ion-text-center ion-padding">
+                <IonIcon icon={search} size="large" />
+                <h3>No Plans Found</h3>
+                <p>Try adjusting your search or filters</p>
+                <IonButton onClick={clearFilters}>
+                  Clear All Filters
+                </IonButton>
+              </div>
+            )}
+          </div>
+        ) : null}
       </IonContent>
     </IonPage>
   );
