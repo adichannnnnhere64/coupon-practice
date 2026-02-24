@@ -52,6 +52,9 @@
       ],
       "@assets/*": [
         "./src/assets/*"
+      ],
+      "@providers/*": [
+        "./src/providers/*"
       ]
     }
   },

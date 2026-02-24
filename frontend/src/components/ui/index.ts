@@ -6,3 +6,4 @@ export { default as StockBadge } from './StockBadge';
 export { default as CategoryCard } from './CategoryCard';
 export { default as PlanTypeCard } from './PlanTypeCard';
 export { default as PlanCard } from './PlanCard';
+export { default as PageHeader } from './PageHeader';

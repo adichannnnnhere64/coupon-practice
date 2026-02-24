@@ -1,11 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   IonPage,
-  IonHeader,
-  IonToolbar,
-  IonButtons,
-  IonBackButton,
-  IonTitle,
   IonContent,
   IonButton,
   IonIcon,
@@ -13,32 +8,17 @@ import {
   IonChip,
   IonCard,
   IonCardContent,
-  // IonCardHeader,
-  // IonCardTitle,
-  // IonCardSubtitle,
   IonText,
   IonSpinner,
-  // IonGrid,
-  // IonRow,
-  // IonCol,
   IonBadge,
 } from '@ionic/react';
 import { useParams, useHistory } from 'react-router-dom';
-import {
-  heart,
-  shareSocial,
-  arrowBack,
-  pricetag,
-  // checkmarkCircle,
-  // flashOutline,
-  // timeOutline,
-  // shieldCheckmarkOutline,
-  // warningOutline,
-  // closeCircle,
-} from 'ionicons/icons';
+import { heart, shareSocial, pricetag } from 'ionicons/icons';
+import { useQueries } from '@tanstack/react-query';
 import './OperatorPage.scss';
 import apiClient from '@services/APIService';
 import CouponCard from '@components/ui/CouponCard';
+import { PageHeader } from '@components/ui';
 
 interface PlanType {
   id: number;
@@ -52,7 +32,6 @@ interface PlanType {
   meta_data: string;
   created_at: string;
   updated_at: string;
-  // Add inventory fields
   inventory_enabled?: boolean;
   available_stock?: number;
   total_stock?: number;
@@ -74,134 +53,69 @@ interface Operator {
 }
 
 interface InventoryStatus {
-  [planId: number]: {
-    in_stock: boolean;
-    available_stock: number;
-    is_low_stock: boolean;
-    is_out_of_stock: boolean;
-    inventory_enabled: boolean;
-  };
+  in_stock: boolean;
+  available_stock: number;
+  is_low_stock: boolean;
+  is_out_of_stock: boolean;
+  inventory_enabled: boolean;
 }
 
 const OperatorPage: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
   const history = useHistory();
+  const operatorId = parseInt(productId || '1');
 
-  const [operator, setOperator] = useState<Operator | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [inventoryStatus, setInventoryStatus] = useState<InventoryStatus>({});
-  const [checkingInventory, setCheckingInventory] = useState(false);
+  // Fetch operator data with React Query
+  const operatorQuery = useQueries({
+    queries: [
+      {
+        queryKey: ['planType', operatorId],
+        queryFn: () => apiClient.getPlanType(operatorId) as unknown as Promise<Operator>,
+        enabled: !!productId,
+      },
+    ],
+  })[0];
 
-  useEffect(() => {
-    const fetchOperator = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  const operator = operatorQuery.data;
+  const loading = operatorQuery.isLoading;
+  const error = operatorQuery.error ? 'Failed to load operator' : null;
 
-        const result = await apiClient.getPlanType(parseInt(productId || '1')) as any;
+  // Fetch inventory for all plans
+  const inventoryQueries = useQueries({
+    queries: (operator?.plan_types || []).map((plan) => ({
+      queryKey: ['planInventory', plan.id],
+      queryFn: async () => {
+        const response = await apiClient.get<{
+          success: boolean;
+          data: InventoryStatus;
+        }>(`/plans/${plan.id}/inventory/check`);
+        return { planId: plan.id, data: response.data };
+      },
+      enabled: !!operator?.plan_types?.length,
+      staleTime: 1000 * 30, // 30 seconds
+    })),
+  });
 
-        if (result) {
-          setOperator(result);
-          // Check inventory for all active plans
-          if (result.plan_types && result.plan_types.length > 0) {
-            await checkPlansInventory(result.plan_types);
-          }
-        } else {
-          setError('Operator not found');
-        }
-      } catch (err) {
-        console.error('Error fetching operator:', err);
-        setError('Failed to load operator');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const checkingInventory = inventoryQueries.some((q) => q.isLoading);
 
-    if (productId) {
-      fetchOperator();
+  // Build inventory status map from queries
+  const inventoryStatus = inventoryQueries.reduce((acc, query) => {
+    if (query.data) {
+      acc[query.data.planId] = query.data.data || {
+        in_stock: true,
+        available_stock: 999,
+        is_low_stock: false,
+        is_out_of_stock: false,
+        inventory_enabled: false,
+      };
     }
-  }, [productId]);
-
-  // Check inventory for all plans
-  const checkPlansInventory = async (plans: PlanType[]) => {
-    try {
-      setCheckingInventory(true);
-      const statusMap: InventoryStatus = {};
-
-      // Check each active plan's inventory
-      await Promise.all(
-        plans.map(async (plan) => {
-          try {
-            const response = await apiClient.get<{
-              success: boolean;
-              data: {
-                in_stock: boolean;
-                available_stock: number;
-                is_low_stock: boolean;
-                is_out_of_stock: boolean;
-                inventory_enabled: boolean;
-              };
-            }>(`/plans/${plan.id}/inventory/check`);
-
-            if (response.success && response.data) {
-              statusMap[plan.id] = response.data;
-            } else {
-              // Default values if no inventory data
-              statusMap[plan.id] = {
-                in_stock: true,
-                available_stock: 999,
-                is_low_stock: false,
-                is_out_of_stock: false,
-                inventory_enabled: false,
-              };
-            }
-          } catch (error) {
-            console.error(`Error checking inventory for plan ${plan.id}:`, error);
-            // If inventory check fails, assume it's in stock
-            statusMap[plan.id] = {
-              in_stock: true,
-              available_stock: 999,
-              is_low_stock: false,
-              is_out_of_stock: false,
-              inventory_enabled: false,
-            };
-          }
-        })
-      );
-
-      setInventoryStatus(statusMap);
-    } catch (error) {
-      console.error('Error checking inventory:', error);
-    } finally {
-      setCheckingInventory(false);
-    }
-  };
-
-  // const handlePlanClick = (planId: number) => {
-  //   const plan = operator?.plan_types.find(p => p.id === planId);
-  //   const status = inventoryStatus[planId];
-  //
-  //   // Check if plan is available to purchase
-  //   const isAvailable = plan?.is_active &&
-  //     (!status?.inventory_enabled || (status?.in_stock && !status?.is_out_of_stock));
-  //
-  //   if (isAvailable) {
-  //     history.push(`/operator/${planId}`);
-  //   }
-  // };
+    return acc;
+  }, {} as Record<number, InventoryStatus>);
 
   if (loading) {
     return (
       <IonPage>
-        <IonHeader>
-          <IonToolbar>
-            <IonButtons slot="start">
-              <IonBackButton defaultHref="/" />
-            </IonButtons>
-            <IonTitle>Loading...</IonTitle>
-          </IonToolbar>
-        </IonHeader>
+        <PageHeader title="Loading..." defaultHref="/" />
         <IonContent>
           <div className="ion-padding ion-text-center" style={{ marginTop: '50%' }}>
             <IonSpinner name="crescent" />
@@ -215,14 +129,7 @@ const OperatorPage: React.FC = () => {
   if (error || !operator) {
     return (
       <IonPage>
-        <IonHeader>
-          <IonToolbar>
-            <IonButtons slot="start">
-              <IonBackButton defaultHref="/" />
-            </IonButtons>
-            <IonTitle>Operator Not Found</IonTitle>
-          </IonToolbar>
-        </IonHeader>
+        <PageHeader title="Operator Not Found" defaultHref="/" />
         <IonContent>
           <div className="ion-padding ion-text-center">
             <h2>{error || 'Operator not found'}</h2>
@@ -235,24 +142,20 @@ const OperatorPage: React.FC = () => {
 
   return (
     <IonPage className="product-page">
-      <IonHeader>
-        <IonToolbar>
-          <IonButtons slot="start">
-            <IonButton onClick={() => history.goBack()}>
-              <IonIcon slot="icon-only" icon={arrowBack} />
-            </IonButton>
-          </IonButtons>
-          <IonTitle>{operator.name}</IonTitle>
-          <IonButtons slot="end">
+      <PageHeader
+        title={operator.name}
+        defaultHref="/"
+        rightButtons={
+          <>
             <IonButton>
               <IonIcon slot="icon-only" icon={heart} />
             </IonButton>
             <IonButton>
               <IonIcon slot="icon-only" icon={shareSocial} />
             </IonButton>
-          </IonButtons>
-        </IonToolbar>
-      </IonHeader>
+          </>
+        }
+      />
 
       <IonContent fullscreen>
         {/* Operator Image Gallery */}

@@ -15,13 +15,13 @@ class Plan extends Model implements HasMedia
 
     protected $fillable = [
         'plan_type_id',
+        'delivery_method_id',
         'name',
         'base_price',
         'actual_price',
         'description',
         'meta_data',
         'is_active',
-        // Add these new fields
         'inventory_enabled',
         'low_stock_threshold',
     ];
@@ -43,6 +43,11 @@ class Plan extends Model implements HasMedia
     public function planType()
     {
         return $this->belongsTo(PlanType::class);
+    }
+
+    public function deliveryMethod()
+    {
+        return $this->belongsTo(DeliveryMethod::class);
     }
 
     public function attributes()

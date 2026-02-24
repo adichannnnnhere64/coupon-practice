@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   IonPage,
-  IonHeader,
-  IonToolbar,
-  IonButtons,
-  IonBackButton,
-  IonTitle,
   IonContent,
   IonCard,
   IonCardContent,
@@ -27,7 +22,6 @@ import {
 } from '@ionic/react';
 import { useParams, useHistory, useLocation } from 'react-router-dom';
 import {
-  arrowBack,
   wallet,
   checkmarkCircle,
   cash,
@@ -38,12 +32,15 @@ import {
   cardOutline,
   warning,
 } from 'ionicons/icons';
+import { useQuery } from '@tanstack/react-query';
 import './CheckoutPage.scss';
 import apiClient from '@services/APIService';
 import { RouteName } from '@utils/RouteName';
 import PaymentMethodComponent from '@components/PaymentMethodComponent';
 import { useAuth } from '@services/useApi';
 import { useProtectedRoute } from '@services/useProtectedRoute';
+import { PageHeader } from '@components/ui';
+import { usePaymentGatewaysQuery, queryKeys } from '@hooks/useQueries';
 
 interface PlanType {
   id: number;
@@ -100,11 +97,9 @@ const CheckoutPage: React.FC = () => {
   const history = useHistory();
   const location = useLocation<LocationState>();
   const { productId } = useParams<{ productId: string }>();
+  const planIdNum = parseInt(productId || '0');
 
-  // All useState hooks first
-  const [plan, setPlan] = useState<PlanType | null>(location.state?.plan || null);
-  const [operator, setOperator] = useState<Operator | null>(location.state?.operator || null);
-  const [loading, setLoading] = useState(!plan);
+  // UI state
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -113,10 +108,9 @@ const CheckoutPage: React.FC = () => {
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [transactionId, setTransactionId] = useState<number | null>(null);
-  const [gateways, setGateways] = useState<any[]>([]);
-  const [gatewaysLoading, setGatewaysLoading] = useState(false);
+  const [operator, setOperator] = useState<Operator | null>(location.state?.operator || null);
 
-  // All hooks next (useAuth, useProtectedRoute, useEffect)
+  // Auth hooks
   const { user, refreshUser } = useAuth();
 
   const { isChecking } = useProtectedRoute({
@@ -124,124 +118,53 @@ const CheckoutPage: React.FC = () => {
     errorMessage: 'You need to be logged in to access this page'
   });
 
-  // Log isChecking changes
-  useEffect(() => {
-    console.log('isChecking:', isChecking);
-  }, [isChecking]);
+  // Fetch plan data with React Query
+  const planQuery = useQuery({
+    queryKey: queryKeys.plan(planIdNum),
+    queryFn: () => apiClient.getPlan(planIdNum),
+    enabled: !!productId && !isChecking,
+  });
 
-  // Fetch plan data - only runs after auth check is complete
+  const plan: PlanType | null = planQuery.data ? {
+    id: planQuery.data.id,
+    plan_type_id: planQuery.data.plan_type_id,
+    name: planQuery.data.name,
+    description: planQuery.data.description || '',
+    base_price: planQuery.data.base_price,
+    actual_price: planQuery.data.actual_price,
+    is_active: planQuery.data.is_active,
+    discount_percentage: planQuery.data.discount_percentage || 0,
+    meta_data: '',
+  } : location.state?.plan || null;
+
+  const loading = planQuery.isLoading;
+
+  // Fetch operator data
   useEffect(() => {
-    // Don't run if auth is still checking
-    if (isChecking) {
-      return;
+    if (planQuery.data?.plan_type_id && !operator) {
+      apiClient.getPlanType(planQuery.data.plan_type_id).then((data) => {
+        setOperator({
+          id: data.id,
+          name: data.name,
+          description: data.description || '',
+          image: '',
+        });
+      });
     }
+  }, [planQuery.data?.plan_type_id, operator]);
 
-    const fetchPlanData = async () => {
-      if (!plan && productId) {
-        try {
-          setLoading(true);
-          const planData = await apiClient.getPlan(parseInt(productId));
+  // Fetch payment gateways with React Query
+  const gatewaysQuery = usePaymentGatewaysQuery();
+  const gateways = gatewaysQuery.data || [];
+  const gatewaysLoading = gatewaysQuery.isLoading;
 
-          const mappedPlan: PlanType = {
-            id: planData.id,
-            plan_type_id: planData.plan_type_id,
-            name: planData.name,
-            description: planData.description || '',
-            base_price: planData.base_price,
-            actual_price: planData.actual_price,
-            is_active: planData.is_active,
-            discount_percentage: planData.discount_percentage || 0,
-            meta_data: '',
-          };
-
-          setPlan(mappedPlan);
-
-          if (planData.plan_type_id) {
-            const operatorData = await apiClient.getPlanType(planData.plan_type_id);
-            setOperator({
-              id: operatorData.id,
-              name: operatorData.name,
-              description: operatorData.description || '',
-              image: '',
-            });
-          }
-        } catch (error) {
-          console.error('Error fetching plan:', error);
-          setError('Failed to load plan details');
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchPlanData();
-  }, [productId, plan, isChecking]);
-
-  // Fetch available payment gateways - only runs after auth check is complete
+  // Set default gateway when gateways load
   useEffect(() => {
-    // Don't run if auth is still checking
-    if (isChecking) {
-      return;
+    if (gateways.length > 0 && !selectedGateway) {
+      const stripeGateway = gateways.find((g: any) => g.name === 'stripe');
+      setSelectedGateway(stripeGateway ? 'stripe' : gateways[0].name);
     }
-
-    const fetchGateways = async () => {
-      try {
-        setGatewaysLoading(true);
-        const response = await apiClient.get<{ success: boolean; data: any[] }>('/payment/gateways');
-
-        console.log('Gateways API Response:', response);
-
-        if (response.success && response.data) {
-          console.log('All gateways from API:', response.data);
-
-          // Fix: Handle undefined is_active by treating it as true
-          const externalGateways = response.data.filter(gateway => {
-            // If is_active is undefined, assume it's true (active)
-            const isActive = gateway.is_active === undefined ? true : Boolean(gateway.is_active);
-            const isNotInternal = gateway.name !== 'internal';
-            const isExternal = Boolean(gateway.is_external); // stripe shows is_external: true
-
-            console.log(`Gateway ${gateway.name}:`, {
-              isActive,
-              isNotInternal,
-              isExternal,
-              is_active_value: gateway.is_active,
-              is_external_value: gateway.is_external
-            });
-
-            return isActive && isNotInternal && isExternal;
-          });
-
-          console.log('External gateways for checkout:', externalGateways);
-
-          setGateways(externalGateways);
-
-          if (externalGateways.length > 0) {
-            const stripeGateway = externalGateways.find(g => g.name === 'stripe');
-            if (stripeGateway) {
-              console.log('Found Stripe gateway:', stripeGateway);
-              setSelectedGateway('stripe');
-            } else {
-              console.log('Stripe NOT found in filtered gateways');
-              setSelectedGateway(externalGateways[0].name);
-            }
-          } else {
-            console.warn('No external payment gateways available');
-            setError('No external payment methods available. Please use wallet payment or contact support.');
-          }
-        } else {
-          setError('Failed to load payment options. Please try again.');
-        }
-      } catch (error) {
-        console.error('Error fetching gateways:', error);
-        setError('Failed to load payment options. Please try again.');
-      } finally {
-        setGatewaysLoading(false);
-      }
-    };
-
-    fetchGateways();
-  }, [isChecking]);
+  }, [gateways, selectedGateway]);
 
   const userCredits = parseFloat(user?.wallet_balance || '0');
   const totalPrice = plan?.actual_price || 0;
@@ -560,14 +483,7 @@ const CheckoutPage: React.FC = () => {
   if (loading) {
     return (
       <IonPage>
-        <IonHeader>
-          <IonToolbar>
-            <IonButtons slot="start">
-              <IonBackButton defaultHref="/" />
-            </IonButtons>
-            <IonTitle>Loading...</IonTitle>
-          </IonToolbar>
-        </IonHeader>
+        <PageHeader title="Loading..." defaultHref="/" />
         <IonContent>
           <div className="ion-padding ion-text-center" style={{ marginTop: '50%' }}>
             <IonSpinner name="crescent" />
@@ -582,14 +498,7 @@ const CheckoutPage: React.FC = () => {
   if (!plan) {
     return (
       <IonPage>
-        <IonHeader>
-          <IonToolbar>
-            <IonButtons slot="start">
-              <IonBackButton defaultHref="/" />
-            </IonButtons>
-            <IonTitle>Plan Not Found</IonTitle>
-          </IonToolbar>
-        </IonHeader>
+        <PageHeader title="Plan Not Found" defaultHref="/" />
         <IonContent>
           <div className="ion-padding ion-text-center">
             <h2>Plan not found</h2>
@@ -602,16 +511,15 @@ const CheckoutPage: React.FC = () => {
 
   return (
     <IonPage className="checkout-page">
-      <IonHeader>
-        <IonToolbar>
-          <IonButtons slot="start">
-            <IonButton onClick={() => history.goBack()}>
-              <IonIcon slot="icon-only" icon={arrowBack} />
-            </IonButton>
-          </IonButtons>
-          <IonTitle>Checkout</IonTitle>
-        </IonToolbar>
-      </IonHeader>
+      <PageHeader
+        title="Checkout"
+        defaultHref={`/operator/${plan.plan_type_id}`}
+        breadcrumbs={[
+          { label: 'Home', href: '/' },
+          { label: operator?.name || 'Operator', href: `/operator/${plan.plan_type_id}` },
+          { label: 'Checkout' },
+        ]}
+      />
 
       <IonContent fullscreen>
         {/* Error Message */}

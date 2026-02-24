@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   IonPage,
   IonHeader,
@@ -35,7 +35,8 @@ import {
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import './SearchPage.scss';
-import { usePlans } from '@services/useApi';
+import { usePlansQuery } from '@hooks/useQueries';
+import { useDebounce } from '@hooks/useDebounce';
 
 const categories = [
   { id: 'all', name: 'All Plans', count: 0 },
@@ -60,61 +61,53 @@ const SearchPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<boolean | null>(null);
   const [sortBy, setSortBy] = useState('popular');
   const [page, setPage] = useState(1);
+  const [allPlans, setAllPlans] = useState<any[]>([]);
   const perPage = 12;
 
-  // Use the plans hook with filters
-  const { 
-    data: plans, 
-    meta, 
-    loading, 
-    error, 
-    updateFilters 
-  } = usePlans({
+  // Debounce search query
+  const debouncedSearch = useDebounce(searchQuery, 500);
+
+  // Build query params
+  const queryParams = useMemo(() => ({
     page,
     per_page: perPage,
-    search: searchQuery || undefined,
+    search: debouncedSearch || undefined,
     plan_type_id: selectedCategory !== 'all' ? parseInt(selectedCategory) : undefined,
     is_active: activeFilter !== null ? activeFilter : undefined,
     min_price: priceRange.lower > 0 ? priceRange.lower : undefined,
     max_price: priceRange.upper < 10000 ? priceRange.upper : undefined,
-  });
+  }), [page, debouncedSearch, selectedCategory, activeFilter, priceRange]);
 
-	console.log(plans)
+  // Use React Query for fetching plans
+  const { data, isLoading: loading, error, refetch } = usePlansQuery(queryParams);
 
-  // Handle search with debounce
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      updateFilters({
-        page: 1,
-        per_page: perPage,
-        search: searchQuery || undefined,
-        plan_type_id: selectedCategory !== 'all' ? parseInt(selectedCategory) : undefined,
-        is_active: activeFilter !== null ? activeFilter : undefined,
-        min_price: priceRange.lower > 0 ? priceRange.lower : undefined,
-        max_price: priceRange.upper < 10000 ? priceRange.upper : undefined,
-      });
-      setPage(1);
-    }, 500);
+  const plans = data?.data || [];
+  const meta = data?.meta || null;
 
-    return () => clearTimeout(timer);
-  }, [searchQuery, selectedCategory, activeFilter, priceRange]);
+  // Accumulate plans for infinite scroll
+  React.useEffect(() => {
+    if (plans.length > 0) {
+      if (page === 1) {
+        setAllPlans(plans);
+      } else {
+        setAllPlans(prev => [...prev, ...plans]);
+      }
+    }
+  }, [plans, page]);
+
+  // Reset on filter change
+  React.useEffect(() => {
+    setPage(1);
+    setAllPlans([]);
+  }, [debouncedSearch, selectedCategory, activeFilter, priceRange]);
 
   // Handle infinite scroll
-  const handleInfiniteScroll = useCallback(async (ev: any) => {
+  const handleInfiniteScroll = async (ev: any) => {
     if (meta && meta.current_page < meta.last_page) {
       setPage(prev => prev + 1);
-      await updateFilters({
-        page: page + 1,
-        per_page: perPage,
-        search: searchQuery || undefined,
-        plan_type_id: selectedCategory !== 'all' ? parseInt(selectedCategory) : undefined,
-        is_active: activeFilter !== null ? activeFilter : undefined,
-        min_price: priceRange.lower > 0 ? priceRange.lower : undefined,
-        max_price: priceRange.upper < 10000 ? priceRange.upper : undefined,
-      });
     }
     ev.target.complete();
-  }, [meta, page, searchQuery, selectedCategory, activeFilter, priceRange]);
+  };
 
   const clearFilters = (): void => {
     setSearchQuery('');
@@ -123,10 +116,7 @@ const SearchPage: React.FC = () => {
     setActiveFilter(null);
     setSortBy('popular');
     setPage(1);
-    updateFilters({
-      page: 1,
-      per_page: perPage,
-    });
+    setAllPlans([]);
   };
 
   const handleViewPlan = (planId: number): void => {
@@ -151,7 +141,7 @@ const SearchPage: React.FC = () => {
   };
 
   // Sort plans locally
-  const sortedPlans = [...plans].sort((a, b) => {
+  const sortedPlans = [...allPlans].sort((a, b) => {
     switch (sortBy) {
       case 'price-low':
         return a.actual_price - b.actual_price;
@@ -349,7 +339,7 @@ const SearchPage: React.FC = () => {
             <IonIcon icon={flame} size="large" color="danger" />
             <h3>Error Loading Plans</h3>
             <p>{error.message}</p>
-            <IonButton onClick={() => updateFilters({})}>
+            <IonButton onClick={() => refetch()}>
               Try Again
             </IonButton>
           </div>

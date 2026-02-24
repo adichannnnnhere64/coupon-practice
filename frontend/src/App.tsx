@@ -44,6 +44,7 @@ import { useAuth } from '@services/useApi';
 import BuyCreditsPage from '@pages/BuyCreditPage';
 import ThankYouPage from '@pages/ThankYouPage';
 import { NotificationProvider } from '@components/NotificationProvider';
+import { QueryProvider } from '@providers/QueryProvider';
 
 let platformMode;
 
@@ -71,9 +72,10 @@ const App: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
 
   return (
-    <IonApp>
-      <NotificationProvider>
-      <IonReactRouter>
+    <QueryProvider>
+      <IonApp>
+        <NotificationProvider>
+          <IonReactRouter>
         {/* Show header only on desktop */}
         {!isMobile && <AppHeader />}
 
@@ -214,9 +216,10 @@ const App: React.FC = () => {
             </Route>
           </IonRouterOutlet>
         )}
-      </IonReactRouter>
-      </NotificationProvider>
-    </IonApp>
+          </IonReactRouter>
+        </NotificationProvider>
+      </IonApp>
+    </QueryProvider>
   );
 };
 

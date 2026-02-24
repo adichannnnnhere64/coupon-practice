@@ -1,39 +1,30 @@
 import React from 'react';
 import {
   IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
   IonContent,
-  IonButtons,
-  IonBackButton,
   IonText,
 } from '@ionic/react';
 import { useParams } from 'react-router-dom';
-import { useCategoryPlanTypes } from '@services/useApi';
+import { useCategoryPlanTypesQuery } from '@hooks/useQueries';
 import { CategoryNavigation } from '@components/categories';
 import { SectionHeader, ResponsiveGrid } from '@components/layout';
-import { PlanTypeCard, LoadingSpinner, ErrorState, EmptyState } from '@components/ui';
+import { PlanTypeCard, LoadingSpinner, ErrorState, EmptyState, PageHeader } from '@components/ui';
 import { gridOutline } from 'ionicons/icons';
 import './CategoryPage.scss';
 
 const CategoryPage: React.FC = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
-  const { category, planTypes, loading, error } = useCategoryPlanTypes(
+  const { data, isLoading, error } = useCategoryPlanTypesQuery(
     categoryId ? parseInt(categoryId) : null
   );
 
-  if (loading) {
+  const category = data?.category;
+  const planTypes = data?.planTypes || [];
+
+  if (isLoading) {
     return (
       <IonPage className="category-page">
-        <IonHeader>
-          <IonToolbar>
-            <IonButtons slot="start">
-              <IonBackButton defaultHref="/" />
-            </IonButtons>
-            <IonTitle>Loading...</IonTitle>
-          </IonToolbar>
-        </IonHeader>
+        <PageHeader title="Loading..." defaultHref="/" />
         <IonContent>
           <LoadingSpinner message="Loading category..." fullPage />
         </IonContent>
@@ -44,19 +35,12 @@ const CategoryPage: React.FC = () => {
   if (error) {
     return (
       <IonPage className="category-page">
-        <IonHeader>
-          <IonToolbar>
-            <IonButtons slot="start">
-              <IonBackButton defaultHref="/" />
-            </IonButtons>
-            <IonTitle>Error</IonTitle>
-          </IonToolbar>
-        </IonHeader>
+        <PageHeader title="Error" defaultHref="/" />
         <IonContent>
           <div className="ion-padding">
             <ErrorState
               title="Failed to load category"
-              message={error.message}
+              message={(error as Error).message}
             />
           </div>
         </IonContent>
@@ -67,14 +51,7 @@ const CategoryPage: React.FC = () => {
   if (!category) {
     return (
       <IonPage className="category-page">
-        <IonHeader>
-          <IonToolbar>
-            <IonButtons slot="start">
-              <IonBackButton defaultHref="/" />
-            </IonButtons>
-            <IonTitle>Not Found</IonTitle>
-          </IonToolbar>
-        </IonHeader>
+        <PageHeader title="Not Found" defaultHref="/" />
         <IonContent>
           <div className="ion-padding">
             <EmptyState
@@ -92,14 +69,14 @@ const CategoryPage: React.FC = () => {
 
   return (
     <IonPage className="category-page">
-      <IonHeader>
-        <IonToolbar>
-          <IonButtons slot="start">
-            <IonBackButton defaultHref="/" />
-          </IonButtons>
-          <IonTitle>{category.name}</IonTitle>
-        </IonToolbar>
-      </IonHeader>
+      <PageHeader
+        title={category.name}
+        defaultHref="/"
+        breadcrumbs={[
+          { label: 'Home', href: '/' },
+          { label: category.name },
+        ]}
+      />
       <IonContent fullscreen>
         <CategoryNavigation
           items={[
