@@ -41,6 +41,7 @@ import { useAuth } from '@services/useApi';
 import { useProtectedRoute } from '@services/useProtectedRoute';
 import { PageHeader } from '@components/ui';
 import { usePaymentGatewaysQuery, queryKeys } from '@hooks/useQueries';
+import { useNotification } from '@services/useNotification';
 
 interface PlanType {
   id: number;
@@ -98,6 +99,7 @@ const CheckoutPage: React.FC = () => {
   const location = useLocation<LocationState>();
   const { productId } = useParams<{ productId: string }>();
   const planIdNum = parseInt(productId || '0');
+   const notif = useNotification();
 
   // UI state
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -230,16 +232,20 @@ const CheckoutPage: React.FC = () => {
 
       const transactionResponse = await apiClient.post<TransactionResponse>('/payment/transaction', transactionData);
 
+
       if (!transactionResponse.success) {
+        notif.error(transactionResponse.message || 'Failed to create transaction');
         throw new Error(transactionResponse.message || 'Failed to create transaction');
       }
 
       setTransactionId(transactionResponse.data.transaction_id);
       setShowConfirmation(true);
 
+
     } catch (error: any) {
-      console.error('Transaction creation failed:', error);
-      setError(error.message || 'Failed to start purchase process');
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to start purchase process';
+      notif.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setIsProcessing(false);
     }
@@ -267,7 +273,8 @@ const CheckoutPage: React.FC = () => {
       }
     } catch (error: any) {
       setIsProcessing(false);
-      setError(error.message || 'Purchase failed. Please try again.');
+      const errorMessage = error.response?.data?.message || error.message || 'Purchase failed. Please try again.';
+      setError(errorMessage);
       console.error('Purchase failed:', error);
     }
   };
@@ -293,12 +300,16 @@ const CheckoutPage: React.FC = () => {
       const response = await apiClient.post<PaymentResponse>('/payment/initiate', paymentData);
 
       if (!response.success) {
+
+        notif.success(response.message);
         throw new Error(response.message || 'Wallet payment failed');
       }
 
       if (response.data.payment_reference) {
         await verifyAndComplete(response.data.payment_reference);
       } else {
+
+        notif.error('No payment reference returned');
         throw new Error('No payment reference returned');
       }
 
@@ -318,6 +329,8 @@ const CheckoutPage: React.FC = () => {
       const response = await apiClient.post<PaymentResponse>('/payment/verify', verificationData);
 
       if (!response.success) {
+
+        notif.error(response.message || 'Payment verification failed');
         throw new Error(response.message || 'Payment verification failed');
       }
 
@@ -357,6 +370,8 @@ const CheckoutPage: React.FC = () => {
       const response = await apiClient.post<PaymentResponse>('/payment/initiate', paymentData);
 
       if (!response.success) {
+
+        notif.error(response.message || 'Payment initiation failed');
         throw new Error(response.message || 'Payment initiation failed');
       }
 
@@ -382,6 +397,8 @@ const CheckoutPage: React.FC = () => {
       const publishableKey = stripeGateway?.config?.public_key;
 
       if (!publishableKey) {
+
+        notif.error('Stripe configuration missing');
         throw new Error('Stripe configuration missing');
       }
 
@@ -397,6 +414,8 @@ const CheckoutPage: React.FC = () => {
         );
 
         if (error) {
+
+        notif.error(error.message);
           throw new Error(error.message);
         }
 
@@ -406,14 +425,20 @@ const CheckoutPage: React.FC = () => {
           const { error: confirmError } = await stripe.handleCardAction(clientSecret);
 
           if (confirmError) {
+
+        notif.error(confirmError.message);
             throw new Error(confirmError.message);
           }
 
           await verifyAndComplete(paymentIntent.id);
         } else if (paymentIntent?.status === 'requires_payment_method') {
+
+        notif.error('Payment method is required. Please select a payment method.');
           throw new Error('Payment method is required. Please select a payment method.');
         }
       } else {
+
+        notif.error('No payment method selected');
         throw new Error('No payment method selected');
       }
 

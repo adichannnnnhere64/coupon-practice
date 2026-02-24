@@ -192,7 +192,7 @@ const BuyCreditsPage: React.FC = () => {
 
     } catch (error: any) {
       console.error('Transaction creation failed:', error);
-      setError(error.message || 'Failed to start purchase process');
+      setError(error.response?.data?.message || error.message || 'Failed to start purchase process');
     }
   };
 
