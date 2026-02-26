@@ -162,8 +162,8 @@ const OrderListPage: React.FC = () => {
 
  const [showFileViewer, setShowFileViewer] = useState<boolean>(false);
   const [fileBlob, setFileBlob] = useState<Blob | null>(null);
-  const [fileMimeType, setFileMimeType] = useState<string>('');
-  const [fileName, setFileName] = useState<string>('');
+  const [fileMimeType] = useState<string>('');
+  const [fileName] = useState<string>('');
 
  function getBaseUrl(): string {
     const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
@@ -264,6 +264,93 @@ const OrderListPage: React.FC = () => {
     fetchOrders(1);
   }
 }, []);
+
+      const [couponCode, setCouponCode] = useState(null);
+const [loadingCode, setLoadingCode] = useState(false);
+
+    const [fileExists, setFileExists] = useState(false);  // Track if the file exists
+
+    useEffect(() => {
+  const checkFileExistence = async () => {
+    const id = selectedOrder?.metadata?.reserved_inventory_ids?.[0];
+    if (!id) return;
+
+    setLoading(true);  // Start loading
+
+    try {
+      const response = await fetch(
+        `${getBaseUrl()}/coupons/view/${id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+          },
+        }
+      );
+
+      if (response.status === 404) {
+        setFileExists(false);  // No file found
+      } else if (response.status === 403) {
+        setFileExists(false);  // Invalid file type
+      } else if (response.ok) {
+        setFileExists(true);  // File exists and is valid
+      }
+
+    } catch (error) {
+      console.error(error);
+      setFileExists(false);  // If there is an error, set to false
+    } finally {
+      setLoading(false);  // Stop loading
+    }
+  };
+
+  checkFileExistence();  // Run the function when the component mounts or selectedOrder changes
+}, [selectedOrder]);  // The effect will run every time selectedOrder changes
+
+        useEffect(() => {
+  const fetchCouponCode = async () => {
+    const id = selectedOrder?.metadata?.reserved_inventory_ids?.[0];
+    if (!id) {
+      setCouponCode(null);
+      return;
+    }
+
+    try {
+      setLoadingCode(true);
+
+      const response = await fetch(
+        `${getBaseUrl()}/coupons/code/${id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        setCouponCode(null);
+        return;
+      }
+
+      const data = await response.json();
+
+      if (data.code) {
+        setCouponCode(data.code);
+      } else {
+        setCouponCode(null);
+      }
+
+    } catch (error) {
+      console.error(error);
+      setCouponCode(null);
+    } finally {
+      setLoadingCode(false);
+    }
+  };
+
+  fetchCouponCode();
+}, [selectedOrder]);
+
+
 
 // Also add this effect to fetch orders when component mounts
 useEffect(() => {
@@ -541,50 +628,48 @@ useEffect(() => {
 //   }
 // };
 
-
-
-        const handleViewCoupon = async () => {
-    const id = selectedOrder?.metadata?.reserved_inventory_ids?.[0];
-    if (!id) return;
-
-    try {
-      const response = await fetch(
-        `${getBaseUrl()}/coupons/view/${id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
-          },
-        }
-      );
-
-      if (!response.ok) throw new Error('Failed to fetch');
-
-      const blob = await response.blob();
-      const contentType = response.headers.get('content-type') || '';
-
-      // Determine file extension
-      let extension = 'bin';
-      if (contentType.includes('pdf')) extension = 'pdf';
-      else if (contentType.includes('image')) extension = contentType.split('/')[1];
-      else if (contentType.includes('text')) extension = 'txt';
-      else if (contentType.includes('json')) extension = 'json';
-
-      setFileBlob(blob);
-      setFileMimeType(contentType);
-      setFileName(`coupon-${id}.${extension}`);
-      setShowFileViewer(true);
-
-    } catch (error) {
-      console.error(error);
-      // Show error toast
-      // const toast = await toastController.create({
-      //   message: 'Failed to load coupon',
-      //   duration: 2000,
-      //   color: 'danger'
-      // });
-      // toast.present();
-    }
-  };
+  //         const handleViewCoupon = async () => {
+  //   const id = selectedOrder?.metadata?.reserved_inventory_ids?.[0];
+  //   if (!id) return;
+  //
+  //   try {
+  //     const response = await fetch(
+  //       `${getBaseUrl()}/coupons/view/${id}`,
+  //       {
+  //         headers: {
+  //           Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+  //         },
+  //       }
+  //     );
+  //
+  //     if (!response.ok) throw new Error('Failed to fetch');
+  //
+  //     const blob = await response.blob();
+  //     const contentType = response.headers.get('content-type') || '';
+  //
+  //     // Determine file extension
+  //     let extension = 'bin';
+  //     if (contentType.includes('pdf')) extension = 'pdf';
+  //     else if (contentType.includes('image')) extension = contentType.split('/')[1];
+  //     else if (contentType.includes('text')) extension = 'txt';
+  //     else if (contentType.includes('json')) extension = 'json';
+  //
+  //     setFileBlob(blob);
+  //     setFileMimeType(contentType);
+  //     setFileName(`coupon-${id}.${extension}`);
+  //     setShowFileViewer(true);
+  //
+  //   } catch (error) {
+  //     console.error(error);
+  //     // Show error toast
+  //     // const toast = await toastController.create({
+  //     //   message: 'Failed to load coupon',
+  //     //   duration: 2000,
+  //     //   color: 'danger'
+  //     // });
+  //     // toast.present();
+  //   }
+  // };
 
   const handleCloseFileViewer = () => {
     setShowFileViewer(false);
@@ -619,6 +704,29 @@ useEffect(() => {
 // };
 //
 
+        const handleViewFile = async () => {
+  const id = selectedOrder?.metadata?.reserved_inventory_ids?.[0];
+  if (!id) return;
+
+  try {
+    const response = await fetch(
+      `${getBaseUrl()}/coupons/view/${id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+      }
+    );
+
+    if (!response.ok) throw new Error("Failed to fetch");
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url);  // Open the file in a new tab
+  } catch (error) {
+    console.error(error);
+  }
+};
 
   return (
 
@@ -706,11 +814,21 @@ useEffect(() => {
                     <IonCol size="12">
                       <div className="order-items-section">
 
-                                                    <IonButton onClick={handleViewCoupon}>View</IonButton>
+                                                        {fileExists && !loading && (
+  <IonButton onClick={handleViewFile}>
+    View File
+  </IonButton>)}
+
+                                                        {couponCode && !loadingCode && (
+  <IonButton onClick={() => alert(couponCode)}>
+    View Code
+  </IonButton>
+)}
 
                       </div>
                     </IonCol>
                   </IonRow>
+
 
                   <IonRow>
                     <IonCol size="12">

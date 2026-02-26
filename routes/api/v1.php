@@ -147,6 +147,10 @@ Route::middleware('auth:sanctum')
         Route::get('/view/{inventory}', [CouponController::class, 'view'])
             ->name('view');
 
+
+        Route::get('/code/{inventory}', [CouponController::class, 'code'])
+            ->name('code');
+
         Route::get('/download/{inventory}', [CouponController::class, 'download'])
             ->name('download');
     });
