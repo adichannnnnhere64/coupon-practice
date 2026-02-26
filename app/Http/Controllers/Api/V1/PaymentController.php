@@ -10,6 +10,7 @@ use Adichan\Wallet\Services\WalletService;
 use App\Http\Controllers\Controller;
 use App\Models\Plan;
 use App\Models\PlanInventory;
+use App\Services\DeliveryService;
 use App\Services\InventoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,8 @@ class PaymentController extends Controller
     public function __construct(
         protected PaymentServiceInterface $paymentService,
         protected InventoryService $inventoryService,
-        protected WalletService $walletService
+        protected WalletService $walletService,
+        protected DeliveryService $deliveryService
     ) {}
 
     public function createTransaction(Request $request): JsonResponse
@@ -247,7 +249,12 @@ class PaymentController extends Controller
             $metadata = $transaction->metadata ?? [];
             $inventorySold = 0;
             if (($metadata['purchase_type'] ?? null) === 'plan_purchase') {
-                $inventorySold = $this->sellReservedInventory($metadata, $user->id);
+                $soldIds = $this->sellReservedInventory($metadata, $user->id);
+                $inventorySold = count($soldIds);
+
+                if (! empty($soldIds)) {
+                    $this->deliveryService->queueDelivery($soldIds, $user);
+                }
             }
 
             DB::commit();
@@ -333,7 +340,13 @@ class PaymentController extends Controller
 
                 // Handle plan purchases - sell inventory
                 if (($metadata['purchase_type'] ?? null) === 'plan_purchase') {
-                    $inventorySold = $this->sellReservedInventory($metadata, $user->id);
+                    $soldIds = $this->sellReservedInventory($metadata, $user->id);
+                    $inventorySold = count($soldIds);
+
+                    if (! empty($soldIds)) {
+                        $this->deliveryService->queueDelivery($soldIds, $user);
+                    }
+
                 }
 
                 // Handle credit purchases - add credits to wallet
@@ -409,7 +422,13 @@ class PaymentController extends Controller
 
             // Always process inventory for plan purchases (even if transaction was already completed)
             if (($metadata['purchase_type'] ?? null) === 'plan_purchase') {
-                $inventorySold = $this->sellReservedInventory($metadata, $user->id);
+                $soldIds = $this->sellReservedInventory($metadata, $user->id);
+                $inventorySold = count($soldIds);
+
+                if (!empty($soldIds)) {
+                    $this->deliveryService->queueDelivery($soldIds, $user);
+                }
+
             }
 
             DB::commit();
@@ -430,25 +449,27 @@ class PaymentController extends Controller
         }
     }
 
-    protected function sellReservedInventory(array $metadata, int $userId): int
+    protected function sellReservedInventory(array $metadata, int $userId): array
     {
         if (empty($metadata['reserved_inventory_ids'])) {
-            return 0;
+            return [];
         }
 
         $items = PlanInventory::whereIn('id', $metadata['reserved_inventory_ids'])
             ->where('status', PlanInventory::STATUS_RESERVED)
             ->get();
 
+        $soldIds = [];
         foreach ($items as $item) {
             $item->markAsSold($userId);
+            $soldIds[] = $item->id;
         }
 
         if ($items->isNotEmpty() && $items->first()->plan) {
             $items->first()->plan->updateInventoryCounts();
         }
 
-        return $items->count();
+        return $soldIds; // return array of IDs
     }
 
     protected function addCreditsToWallet($transaction, $user, $gateway, string $paymentReference): ?float

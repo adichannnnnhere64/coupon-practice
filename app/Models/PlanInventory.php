@@ -197,12 +197,19 @@ class PlanInventory extends Model implements HasMedia
 
     public function getCouponViewUrlAttribute(): ?string
     {
-        return URL::temporarySignedRoute(
-            'coupons.view',
-            now()->addMinutes(10),
-            ['inventory' => $this->id]
-        );
+
+    $media = $this->getFirstMedia('coupon');
+    if (! $media) {
+        return null;
     }
+
+    return URL::temporarySignedRoute(
+        'coupons.view',
+        now()->addMinutes(10),
+        ['media' => $media->id]
+    );
+}
+
 
     /**
      * Get all available delivery statuses

@@ -27,6 +27,12 @@ class PlanForm
                     ->searchable()
                     ->preload()
                     ->loadingMessage('Loading operators...'),
+                  Select::make('delivery_method_id')
+                    ->label('Delivery Method')
+                    ->relationship('deliveryMethod', 'display_name')
+                    ->searchable()
+                    ->preload()
+                    ->nullable(),
                 TextInput::make('name')
                     ->required(),
                 TextInput::make('base_price')

@@ -31,6 +31,8 @@ class DeliveryService
      */
     public function queueDelivery(array $inventoryIds, User $user): int
     {
+
+            \Log::info('start queue');
         $queued = 0;
 
         $inventories = PlanInventory::with(['plan.deliveryMethod'])
@@ -65,6 +67,7 @@ class DeliveryService
             }
 
             $inventory->markDeliveryQueued();
+            \Log::info('oki');
 
             ProcessDeliveryJob::dispatch($inventory->id, $user->id)
                 ->onQueue('deliveries');
