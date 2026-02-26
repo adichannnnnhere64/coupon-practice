@@ -40,6 +40,7 @@ class PlanInventoryForm
                     ]),
 
                 TextInput::make('code')
+                    ->unique()
                     ->columnSpanFull()
                     ->required(),
 
