@@ -2,13 +2,11 @@
 
 namespace App\Filament\Resources\Wallets\Schemas;
 
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
 
 class WalletForm
 {
@@ -30,7 +28,9 @@ class WalletForm
                     ->label('Owner')
                     ->options(function (callable $get) {
                         $type = $get('owner_type');
-                        if (!$type) return [];
+                        if (! $type) {
+                            return [];
+                        }
 
                         return $type::all()->pluck('name', 'id')->toArray();
                         // If your model doesn’t have `name`, adjust attribute
@@ -38,7 +38,7 @@ class WalletForm
                     ->required()
                     ->searchable()
                     ->preload(),
-                    /* ->dependsOn(['owner_type']), */
+                /* ->dependsOn(['owner_type']), */
 
                 TextInput::make('balance')
                     ->label('Balance')
@@ -53,4 +53,3 @@ class WalletForm
             ]);
     }
 }
-

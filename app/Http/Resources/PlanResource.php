@@ -21,7 +21,7 @@ class PlanResource extends JsonResource
             'actual_price' => (float) $this->actual_price,
             'is_active' => $this->is_active,
             'discount_percentage' => $this->when($this->base_price > 0,
-                fn() => round((1 - $this->actual_price / $this->base_price) * 100, 2)
+                fn () => round((1 - $this->actual_price / $this->base_price) * 100, 2)
             ),
             'attributes' => PlanAttributeResource::collection($this->whenLoaded('attributes')),
             'plan_type' => new PlanTypeResource($this->whenLoaded('planType')),

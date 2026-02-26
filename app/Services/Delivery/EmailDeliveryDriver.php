@@ -18,12 +18,13 @@ class EmailDeliveryDriver implements DeliveryDriverInterface
     {
         $this->method = $method;
         $this->configureMailer();
+
         return $this;
     }
 
     public function deliver(PlanInventory $inventory, User $user): DeliveryResult
     {
-        if (!$this->method) {
+        if (! $this->method) {
             return DeliveryResult::failure('Delivery method not configured');
         }
 
@@ -55,7 +56,7 @@ class EmailDeliveryDriver implements DeliveryDriverInterface
                 'error' => $e->getMessage(),
             ]);
 
-            return DeliveryResult::failure('Email delivery failed: ' . $e->getMessage());
+            return DeliveryResult::failure('Email delivery failed: '.$e->getMessage());
         }
     }
 
@@ -87,7 +88,7 @@ class EmailDeliveryDriver implements DeliveryDriverInterface
      */
     protected function configureMailer(): void
     {
-        if (!$this->method) {
+        if (! $this->method) {
             return;
         }
 
@@ -108,7 +109,7 @@ class EmailDeliveryDriver implements DeliveryDriverInterface
             'timeout' => $credentials['timeout'] ?? null,
         ]);
 
-        if (!empty($credentials['from_address'])) {
+        if (! empty($credentials['from_address'])) {
             Config::set("mail.mailers.{$mailerName}.from", [
                 'address' => $credentials['from_address'],
                 'name' => $credentials['from_name'] ?? config('app.name'),
@@ -121,10 +122,10 @@ class EmailDeliveryDriver implements DeliveryDriverInterface
      */
     protected function getMailerName(): ?string
     {
-        if (!$this->method || empty($this->method->credentials['host'])) {
+        if (! $this->method || empty($this->method->credentials['host'])) {
             return null;
         }
 
-        return 'delivery_method_' . $this->method->id;
+        return 'delivery_method_'.$this->method->id;
     }
 }

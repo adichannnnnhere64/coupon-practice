@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Api\V1;
 
-use App\Models\PlanType;
 use App\Models\Plan;
 use App\Models\PlanAttribute;
+use App\Models\PlanType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -29,8 +29,8 @@ describe('PlanTypeController', function () {
                             'description',
                             'is_active',
                             'plans_count',
-                        ]
-                    ]
+                        ],
+                    ],
                 ])
                 ->assertJsonCount(3, 'data');
         });
@@ -65,7 +65,7 @@ describe('PlanTypeController', function () {
                         'name',
                         'slug',
                         'plan_types',
-                    ]
+                    ],
                 ])
                 ->assertJsonPath('data.id', $planType->id);
         });
@@ -123,11 +123,11 @@ describe('PlanTypeController', function () {
                                     '*' => [
                                         'name',
                                         'value',
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ]
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
                 ])
                 ->assertJsonCount(3, 'data.plans');
         });

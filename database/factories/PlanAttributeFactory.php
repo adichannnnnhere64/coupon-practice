@@ -26,4 +26,3 @@ class PlanAttributeFactory extends Factory
         ]);
     }
 }
-

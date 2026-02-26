@@ -10,17 +10,17 @@ return new class extends Migration
     {
         // Add inventory fields to plans table
         Schema::table('plans', function (Blueprint $table) {
-            if (!Schema::hasColumn('plans', 'inventory_enabled')) {
+            if (! Schema::hasColumn('plans', 'inventory_enabled')) {
                 $table->boolean('inventory_enabled')->default(false)->after('is_active');
             }
-            if (!Schema::hasColumn('plans', 'low_stock_threshold')) {
+            if (! Schema::hasColumn('plans', 'low_stock_threshold')) {
                 $table->integer('low_stock_threshold')->default(5)->after('inventory_enabled');
             }
         });
 
         // Update plan_inventories table
         Schema::table('plan_inventories', function (Blueprint $table) {
-            if (!Schema::hasColumn('plan_inventories', 'user_id')) {
+            if (! Schema::hasColumn('plan_inventories', 'user_id')) {
                 $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete()->after('plan_id');
             }
 

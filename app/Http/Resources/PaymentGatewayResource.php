@@ -8,6 +8,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @OA\Schema(
  *     schema="PaymentGateway",
  *     type="object",
+ *
  *     @OA\Property(property="id", type="integer", example=1),
  *     @OA\Property(property="name", type="string", example="stripe"),
  *     @OA\Property(property="display_name", type="string", example="Credit Card"),
@@ -24,23 +25,29 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *         @OA\Property(
  *             property="supported_countries",
  *             type="array",
+ *
  *             @OA\Items(type="string", example="US")
  *         )
  *     ),
+ *
  *     @OA\Property(
  *         property="meta",
  *         type="object",
  *         @OA\Property(
  *             property="accepted_cards",
  *             type="array",
+ *
  *             @OA\Items(type="string", example="visa")
  *         ),
+ *
  *         @OA\Property(
  *             property="payment_methods",
  *             type="array",
+ *
  *             @OA\Items(type="string", example="card")
  *         )
  *     ),
+ *
  *     @OA\Property(property="created_at", type="string", format="date-time"),
  *     @OA\Property(property="updated_at", type="string", format="date-time")
  * )

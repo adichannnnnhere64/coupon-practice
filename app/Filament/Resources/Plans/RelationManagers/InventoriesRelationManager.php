@@ -2,9 +2,11 @@
 
 namespace App\Filament\Resources\Plans\RelationManagers;
 
+use App\Filament\Imports\PlanInventoryImporter;
 use App\Filament\Resources\PlanInventories\PlanInventoryResource;
 use App\Filament\Resources\PlanInventories\Schemas\PlanInventoryForm;
-use Filament\Actions\CreateAction;
+use Filament\Actions\CreateAction as TableCreateAction;
+use Filament\Actions\ImportAction;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
@@ -28,15 +30,15 @@ class InventoriesRelationManager extends RelationManager
                 TextColumn::make('code')
                     ->searchable(),
                 TextColumn::make('status')
-                ->formatStateUsing(fn ($state) => match ($state) {
-                    1 => 'Available',
-                    2 => 'Reserved',
-                    3 => 'Sold',
-                    4 => 'Expired',
-                    default => 'Unknown',
-                })
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        1 => 'Available',
+                        2 => 'Reserved',
+                        3 => 'Sold',
+                        4 => 'Expired',
+                        default => 'Unknown',
+                    })
                     ->badge()
-                ->searchable(),
+                    ->searchable(),
 
                 TextColumn::make('purchased_at')
                     ->dateTime()
@@ -60,7 +62,12 @@ class InventoriesRelationManager extends RelationManager
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])->headerActions([
-        CreateAction::make(),
+                TableCreateAction::make(),
+                ImportAction::make()
+                    ->importer(PlanInventoryImporter::class)
+                    ->options(fn ($livewire) => [
+                        'plan_id' => $livewire->getOwnerRecord()->id,
+                    ]),
             ]);
 
     }

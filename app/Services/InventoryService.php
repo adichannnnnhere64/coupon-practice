@@ -13,11 +13,11 @@ class InventoryService
      */
     public function validateAndReserve(Plan $plan, int $quantity = 1, array $metadata = []): array
     {
-        if (!$plan->inventory_enabled) {
+        if (! $plan->inventory_enabled) {
             return [];
         }
 
-        if (!$plan->hasAvailableInventory($quantity)) {
+        if (! $plan->hasAvailableInventory($quantity)) {
             throw new \Exception("Insufficient stock for plan: {$plan->name}. Available: {$plan->availableStock}, Requested: {$quantity}");
         }
 

@@ -3,11 +3,11 @@
 // tests/Feature/PlanTest.php
 
 use App\Models\Plan;
-use App\Models\PlanType;
 use App\Models\PlanAttribute;
-use App\Services\PlanService;
 use App\Models\PlanInventory;
+use App\Models\PlanType;
 use App\Services\PlanInventoryService;
+use App\Services\PlanService;
 
 beforeEach(function () {
     $this->planService = app(PlanService::class);
@@ -73,7 +73,6 @@ it('can update plan', function () {
         ->and($updated->actual_price)->toBe('99.99');
 });
 
-
 it('cannot delete plan with existing inventory', function () {
     $plan = Plan::factory()->create();
 
@@ -105,8 +104,6 @@ it('calculates available stock correctly', function () {
 });
 
 // tests/Feature/PlanInventoryTest.php
-
-
 
 beforeEach(function () {
     $this->inventoryService = app(PlanInventoryService::class);

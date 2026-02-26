@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\ApiController;
-use App\Http\Resources\PlanTypeResource;
 use App\Http\Resources\PlanResource;
+use App\Http\Resources\PlanTypeResource;
 use App\Models\PlanType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

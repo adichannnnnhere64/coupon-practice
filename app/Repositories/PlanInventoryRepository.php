@@ -8,9 +8,7 @@ use Illuminate\Support\Collection as SupportCollection;
 
 class PlanInventoryRepository
 {
-    public function __construct(protected PlanInventory $model)
-    {
-    }
+    public function __construct(protected PlanInventory $model) {}
 
     public function create(array $data): PlanInventory
     {
@@ -23,10 +21,11 @@ class PlanInventoryRepository
         foreach ($inventories as $inventory) {
             $created->push($this->model->create($inventory));
         }
+
         return $created;
     }
 
-    public function getAvailableByPlan(int $planId, int $limit = null): Collection
+    public function getAvailableByPlan(int $planId, ?int $limit = null): Collection
     {
         $query = $this->model->where('plan_id', $planId)
             ->where('status', PlanInventory::STATUS_AVAILABLE)
@@ -47,6 +46,7 @@ class PlanInventoryRepository
     public function updateStatus(PlanInventory $inventory, string $status): PlanInventory
     {
         $inventory->update(['status' => $status]);
+
         return $inventory->fresh();
     }
 
@@ -56,6 +56,7 @@ class PlanInventoryRepository
             'status' => 'sold',
             'sold_at' => now(),
         ]);
+
         return $inventory->fresh();
     }
 

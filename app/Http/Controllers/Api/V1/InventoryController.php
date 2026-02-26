@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Plan;
-use App\Models\PlanInventory;
 use App\Services\InventoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -51,7 +50,7 @@ class InventoryController extends Controller
 
         $inventory = $this->inventoryService->getByCode($code);
 
-        if (!$inventory) {
+        if (! $inventory) {
             return response()->json([
                 'success' => false,
                 'message' => 'Inventory item not found',

@@ -7,24 +7,22 @@ use Symfony\Component\HttpFoundation\Response;
 
 trait ApiResponse
 {
-
-
     protected function success(
-    mixed $data = [],
-    string $message = 'Success',
-    int $code = Response::HTTP_OK
-): JsonResponse {
+        mixed $data = [],
+        string $message = 'Success',
+        int $code = Response::HTTP_OK
+    ): JsonResponse {
 
-    if ($data instanceof \Illuminate\Http\Resources\Json\JsonResource) {
-        $data = $data->resolve();
+        if ($data instanceof \Illuminate\Http\Resources\Json\JsonResource) {
+            $data = $data->resolve();
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'data' => $data,
+        ], $code);
     }
-
-    return response()->json([
-        'success' => true,
-        'message' => $message,
-        'data' => $data,
-    ], $code);
-}
 
     protected function created(
         mixed $data = null,

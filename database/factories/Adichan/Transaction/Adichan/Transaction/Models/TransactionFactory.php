@@ -2,8 +2,8 @@
 
 namespace Database\Factories\Adichan\Transaction\Models;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use Adichan\Transaction\Models\Transaction;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class TransactionFactory extends Factory
 {

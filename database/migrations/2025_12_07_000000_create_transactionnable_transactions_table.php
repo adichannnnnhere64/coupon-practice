@@ -10,13 +10,13 @@ return new class extends Migration
     {
         Schema::table('transactions', function (Blueprint $table) {
             $table->nullableMorphs('transactionable');
-            
+
             // Add description and metadata columns
-            if (!Schema::hasColumn('transactions', 'description')) {
+            if (! Schema::hasColumn('transactions', 'description')) {
                 $table->text('description')->nullable()->after('total');
             }
-            
-            if (!Schema::hasColumn('transactions', 'metadata')) {
+
+            if (! Schema::hasColumn('transactions', 'metadata')) {
                 $table->json('metadata')->nullable()->after('description');
             }
         });

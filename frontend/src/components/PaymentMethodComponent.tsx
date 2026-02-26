@@ -42,7 +42,7 @@ const PaymentMethodComponent: React.FC<PaymentMethodComponentProps> = ({
     fetchPaymentMethods();
   }, []);
 
-  const fetchPaymentMethods = useCallback(async (): Promise<void> => {
+  const fetchPaymentMethods = useCallback(async (): Promise<string | null> => {
     try {
       setLoading(true);
       const response = await apiClient.get<{ success: boolean; data: PaymentMethod[] }>('/payment/methods');
@@ -53,11 +53,14 @@ const PaymentMethodComponent: React.FC<PaymentMethodComponentProps> = ({
         if (defaultMethod) {
           setSelectedMethod(defaultMethod.id);
           onMethodSelected?.(defaultMethod.id);
+          return defaultMethod.id;
         }
       }
+      return null;
     } catch (error) {
       console.error('Error fetching payment methods:', error);
       setError('Failed to load payment methods');
+      return null;
     } finally {
       setLoading(false);
     }
@@ -83,8 +86,8 @@ const PaymentMethodComponent: React.FC<PaymentMethodComponentProps> = ({
         throw new Error(response.message || 'Failed to save payment method');
       }
 
-      await fetchPaymentMethods();
-      onPaymentMethodAdded?.(null);
+      const selectedId = await fetchPaymentMethods();
+      onPaymentMethodAdded?.(selectedId);
       setShowAddForm(false);
 
     } catch (error: any) {

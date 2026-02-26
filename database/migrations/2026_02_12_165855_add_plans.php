@@ -9,10 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('plans', function (Blueprint $table) {
-            if (!Schema::hasColumn('plans', 'inventory_enabled')) {
+            if (! Schema::hasColumn('plans', 'inventory_enabled')) {
                 $table->boolean('inventory_enabled')->default(false)->after('is_active');
             }
-            if (!Schema::hasColumn('plans', 'low_stock_threshold')) {
+            if (! Schema::hasColumn('plans', 'low_stock_threshold')) {
                 $table->integer('low_stock_threshold')->default(5)->after('inventory_enabled');
             }
         });

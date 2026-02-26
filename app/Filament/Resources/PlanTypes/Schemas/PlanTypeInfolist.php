@@ -4,8 +4,8 @@ namespace App\Filament\Resources\PlanTypes\Schemas;
 
 use App\Models\PlanType;
 use Filament\Infolists\Components\IconEntry;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\SpatieMediaLibraryImageEntry;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
 
 class PlanTypeInfolist

@@ -1,10 +1,10 @@
 <?php
 
-use App\Http\Controllers\Api\V1\CategoryController;
-use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CouponController;
 use App\Http\Controllers\Api\V1\OrderController;
+use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PaymentGatewayController;
 use App\Http\Controllers\Api\V1\PlanController;
 use App\Http\Controllers\Api\V1\PlanTypeController;
@@ -42,7 +42,6 @@ Route::middleware('throttle:api')->group(function () {
     Route::get('plans/{plan}/inventory', [PlanController::class, 'inventory'])->name('api.v1.plans.inventory');
     Route::get('/plans/{planId}/inventory', [PaymentController::class, 'checkPlanInventory']);
 
-
 });
 
 // Payment method management routes
@@ -53,7 +52,6 @@ Route::middleware('auth:sanctum')->prefix('payment')->group(function () {
     Route::post('/methods/{id}/set-default', [PaymentController::class, 'setDefaultPaymentMethod']);
     Route::get('/payment/gateway-config', [PaymentController::class, 'getGatewayConfig']);
 });
-
 
 Route::middleware('auth:sanctum')->prefix('orders')->group(function () {
     // Get user's orders
@@ -76,7 +74,6 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin/orders')->group(func
     Route::get('/{id}', [OrderController::class, 'adminShow']);
     Route::put('/{id}/status', [OrderController::class, 'updateStatus']);
 });
-
 
 Route::prefix('payment')->group(function () {
     // Public routes
@@ -142,9 +139,6 @@ Route::prefix('payment')->group(function () {
     });
 });
 
-
-
-
 Route::middleware('auth:sanctum')
     ->prefix('coupons')
     ->name('api.coupons.')
@@ -157,8 +151,6 @@ Route::middleware('auth:sanctum')
             ->name('download');
     });
 
-
-
 Route::middleware(['web'])
     ->prefix('admin/coupons')
     ->name('admin.coupons.')
@@ -170,9 +162,6 @@ Route::middleware(['web'])
         Route::get('/download/{inventory}', [CouponController::class, 'download'])
             ->name('download');
     });
-
-
-
 
 // Protected routes with authenticated rate limiter (120/min)
 Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function () {

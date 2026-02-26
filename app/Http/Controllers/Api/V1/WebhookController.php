@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use Adichan\Payment\Interfaces\PaymentServiceInterface;
 use Adichan\Transaction\Models\Transaction;
 use Adichan\Wallet\Services\WalletService;
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -32,7 +32,7 @@ class WebhookController extends Controller
             // Process webhook through payment service
             $result = $this->paymentService->processWebhook('stripe', $payload);
 
-            if (!$result->shouldProcess()) {
+            if (! $result->shouldProcess()) {
                 Log::info('Webhook not processed', [
                     'event_type' => $result->getEventType(),
                     'reason' => 'shouldProcess returned false',
@@ -75,10 +75,11 @@ class WebhookController extends Controller
                 $result->getGatewayReference()
             )->first();
 
-            if (!$payment || !$payment->transaction) {
+            if (! $payment || ! $payment->transaction) {
                 Log::warning('Payment or transaction not found for webhook', [
                     'reference' => $result->getGatewayReference(),
                 ]);
+
                 return;
             }
 
@@ -90,6 +91,7 @@ class WebhookController extends Controller
                 Log::info('Payment already processed', [
                     'transaction_id' => $transaction->id,
                 ]);
+
                 return;
             }
 
@@ -98,20 +100,22 @@ class WebhookController extends Controller
             $userId = $meta['user_id'] ?? null;
             $credits = $meta['credits'] ?? null;
 
-            if (!$userId || !$credits) {
+            if (! $userId || ! $credits) {
                 Log::error('Missing user or credits in transaction meta', [
                     'transaction_id' => $transaction->id,
                     'meta' => $meta,
                 ]);
+
                 return;
             }
 
             $user = \App\Models\User::find($userId);
 
-            if (!$user) {
+            if (! $user) {
                 Log::error('User not found', [
                     'user_id' => $userId,
                 ]);
+
                 return;
             }
 

@@ -15,19 +15,20 @@ class WebhookDeliveryDriver implements DeliveryDriverInterface
     public function setMethod(DeliveryMethod $method): self
     {
         $this->method = $method;
+
         return $this;
     }
 
     public function deliver(PlanInventory $inventory, User $user): DeliveryResult
     {
-        if (!$this->method) {
+        if (! $this->method) {
             return DeliveryResult::failure('Delivery method not configured');
         }
 
         $credentials = $this->method->credentials;
         $url = $credentials['url'] ?? null;
 
-        if (!$url) {
+        if (! $url) {
             return DeliveryResult::failure('Webhook URL not configured');
         }
 
@@ -64,7 +65,7 @@ class WebhookDeliveryDriver implements DeliveryDriverInterface
                 'error' => $e->getMessage(),
             ]);
 
-            return DeliveryResult::failure('Webhook delivery failed: ' . $e->getMessage());
+            return DeliveryResult::failure('Webhook delivery failed: '.$e->getMessage());
         }
     }
 
@@ -75,7 +76,7 @@ class WebhookDeliveryDriver implements DeliveryDriverInterface
 
     public function validateCredentials(array $credentials): bool
     {
-        return !empty($credentials['url']) && filter_var($credentials['url'], FILTER_VALIDATE_URL);
+        return ! empty($credentials['url']) && filter_var($credentials['url'], FILTER_VALIDATE_URL);
     }
 
     protected function buildPayload(PlanInventory $inventory, User $user): array
@@ -110,12 +111,12 @@ class WebhookDeliveryDriver implements DeliveryDriverInterface
         ];
 
         // Add custom headers if configured
-        if (!empty($credentials['headers']) && is_array($credentials['headers'])) {
+        if (! empty($credentials['headers']) && is_array($credentials['headers'])) {
             $headers = array_merge($headers, $credentials['headers']);
         }
 
         // Add HMAC signature if secret is configured
-        if (!empty($credentials['secret'])) {
+        if (! empty($credentials['secret'])) {
             $signature = $this->generateSignature($payload, $credentials['secret']);
             $headers['X-Signature'] = $signature;
             $headers['X-Signature-Algorithm'] = 'sha256';
@@ -127,6 +128,7 @@ class WebhookDeliveryDriver implements DeliveryDriverInterface
     protected function generateSignature(array $payload, string $secret): string
     {
         $payloadJson = json_encode($payload);
+
         return hash_hmac('sha256', $payloadJson, $secret);
     }
 }

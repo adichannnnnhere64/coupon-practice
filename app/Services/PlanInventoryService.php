@@ -12,8 +12,7 @@ class PlanInventoryService
 {
     public function __construct(
         protected PlanInventoryRepository $repository
-    ) {
-    }
+    ) {}
 
     public function addInventory(int $planId, string $code, array $additionalData = []): PlanInventory
     {
@@ -46,13 +45,13 @@ class PlanInventoryService
         $codes = [];
 
         for ($i = 0; $i < $quantity; $i++) {
-            $codes[] = $prefix . strtoupper(Str::random(12));
+            $codes[] = $prefix.strtoupper(Str::random(12));
         }
 
         return $this->bulkAddInventory($planId, $codes);
     }
 
-    public function getAvailableInventory(int $planId, int $limit = null): Collection
+    public function getAvailableInventory(int $planId, ?int $limit = null): Collection
     {
         return $this->repository->getAvailableByPlan($planId, $limit);
     }
@@ -61,7 +60,7 @@ class PlanInventoryService
     {
         $inventory = $this->repository->findByCode($code);
 
-        if (!$inventory) {
+        if (! $inventory) {
             throw new \Exception('Inventory not found');
         }
 
@@ -76,11 +75,11 @@ class PlanInventoryService
     {
         $inventory = $this->repository->findByCode($code);
 
-        if (!$inventory) {
+        if (! $inventory) {
             throw new \Exception('Inventory not found');
         }
 
-        if (!in_array($inventory->status, [PlanInventory::STATUS_AVAILABLE, 'reserved'])) {
+        if (! in_array($inventory->status, [PlanInventory::STATUS_AVAILABLE, 'reserved'])) {
             throw new \Exception('Inventory cannot be sold');
         }
 
@@ -96,7 +95,7 @@ class PlanInventoryService
     {
         $inventory = $this->repository->findByCode($code);
 
-        if (!$inventory) {
+        if (! $inventory) {
             throw new \Exception('Inventory not found');
         }
 

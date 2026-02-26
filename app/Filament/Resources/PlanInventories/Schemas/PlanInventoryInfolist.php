@@ -42,19 +42,18 @@ class PlanInventoryInfolist
                     ->dateTime()
                     ->visible(fn (PlanInventory $record): bool => $record->trashed()),
                 SpatieMediaLibraryFileUpload::make('coupon')
-    ->collection('coupon')
-    ->disk('private')
-    ->maxSize(5120)
-    ->columnSpanFull()
-    ->afterStateHydrated(function ($component, $state) {
-        $media = $component->getState()?->first(); // get the first media
+                    ->collection('coupon')
+                    ->disk('private')
+                    ->maxSize(5120)
+                    ->columnSpanFull()
+                    ->afterStateHydrated(function ($component, $state) {
+                        $media = $component->getState()?->first(); // get the first media
 
-        if ($media) {
-            // Set a temporary "preview URL" pointing to your secure route
-            $component->previewUrl(route('coupons.download', $media));
-        }
-    })
-
+                        if ($media) {
+                            // Set a temporary "preview URL" pointing to your secure route
+                            $component->previewUrl(route('coupons.download', $media));
+                        }
+                    }),
 
             ]);
     }

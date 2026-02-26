@@ -32,7 +32,7 @@ class PaymentController extends Controller
 
         $validator = Validator::make($request->all(), [
             'amount' => 'required|numeric|min:0.01|max:10000',
-            'gateway' => 'required|string|in:' . implode(',', $activeGateways),
+            'gateway' => 'required|string|in:'.implode(',', $activeGateways),
             'currency' => 'string|size:3',
             'description' => 'string|max:255',
             'metadata' => 'array',
@@ -46,7 +46,7 @@ class PaymentController extends Controller
 
         try {
             $gateway = PaymentGateway::where('name', $request->gateway)->where('is_active', true)->first();
-            if (!$gateway) {
+            if (! $gateway) {
                 return $this->error('Payment gateway not available', 400);
             }
 
@@ -116,7 +116,8 @@ class PaymentController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Transaction creation failed', ['error' => $e->getMessage()]);
-            return $this->error('Failed to create transaction: ' . $e->getMessage(), 500);
+
+            return $this->error('Failed to create transaction: '.$e->getMessage(), 500);
         }
     }
 
@@ -143,7 +144,7 @@ class PaymentController extends Controller
         try {
             $transaction = Transaction::findOrFail($request->transaction_id);
 
-            if (!$this->userOwnsTransaction($user, $transaction)) {
+            if (! $this->userOwnsTransaction($user, $transaction)) {
                 return $this->error('Unauthorized access to transaction', 403);
             }
 
@@ -152,7 +153,7 @@ class PaymentController extends Controller
             }
 
             $gateway = PaymentGateway::where('name', $request->gateway)->where('is_active', true)->first();
-            if (!$gateway) {
+            if (! $gateway) {
                 return $this->error('Payment gateway not available', 400);
             }
 
@@ -179,7 +180,7 @@ class PaymentController extends Controller
 
             $paymentResponse = $this->paymentService->setGateway($gateway->name)->pay($transaction, $options);
 
-            if (!$paymentResponse->isSuccessful()) {
+            if (! $paymentResponse->isSuccessful()) {
                 return $this->error($paymentResponse->getErrorMessage() ?? 'Payment initiation failed', 400);
             }
 
@@ -206,7 +207,8 @@ class PaymentController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Payment initiation failed', ['error' => $e->getMessage()]);
-            return $this->error('Payment initiation failed: ' . $e->getMessage(), 500);
+
+            return $this->error('Payment initiation failed: '.$e->getMessage(), 500);
         }
     }
 
@@ -235,7 +237,7 @@ class PaymentController extends Controller
 
             $paymentResponse = $this->paymentService->setGateway($gateway->name)->pay($transaction, $options);
 
-            if (!$paymentResponse->isSuccessful()) {
+            if (! $paymentResponse->isSuccessful()) {
                 throw new \Exception($paymentResponse->getErrorMessage() ?? 'Wallet payment failed');
             }
 
@@ -259,7 +261,8 @@ class PaymentController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Internal payment failed', ['error' => $e->getMessage()]);
-            return $this->error('Internal payment failed: ' . $e->getMessage(), 500);
+
+            return $this->error('Internal payment failed: '.$e->getMessage(), 500);
         }
     }
 
@@ -269,7 +272,7 @@ class PaymentController extends Controller
 
         $validator = Validator::make($request->all(), [
             'payment_reference' => 'required|string',
-            'gateway' => 'required|string|in:' . implode(',', $activeGateways),
+            'gateway' => 'required|string|in:'.implode(',', $activeGateways),
             'transaction_id' => 'sometimes|integer|exists:transactions,id',
         ]);
 
@@ -281,7 +284,7 @@ class PaymentController extends Controller
 
         try {
             $gateway = PaymentGateway::where('name', $request->gateway)->where('is_active', true)->first();
-            if (!$gateway) {
+            if (! $gateway) {
                 return $this->error('Payment gateway not available', 400);
             }
 
@@ -293,11 +296,11 @@ class PaymentController extends Controller
                 ->orWhere('id', $request->payment_reference)
                 ->first();
 
-            if (!$paymentRecord) {
+            if (! $paymentRecord) {
                 return $this->error('Payment record not found', 404);
             }
 
-            if ($paymentRecord->transaction && !$this->userOwnsTransaction($user, $paymentRecord->transaction)) {
+            if ($paymentRecord->transaction && ! $this->userOwnsTransaction($user, $paymentRecord->transaction)) {
                 return $this->error('Unauthorized access to payment', 403);
             }
 
@@ -311,7 +314,7 @@ class PaymentController extends Controller
 
             $verification = $this->paymentService->setGateway($gateway->name)->verify($request->payment_reference, $request->all());
 
-            if (!$verification->isVerified()) {
+            if (! $verification->isVerified()) {
                 return $this->error($this->getVerificationErrorMessage($verification->getStatus()), 400, [
                     'is_verified' => false,
                     'status' => $verification->getStatus(),
@@ -350,23 +353,24 @@ class PaymentController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Payment verification failed', ['error' => $e->getMessage()]);
-            return $this->error('Payment verification failed: ' . $e->getMessage(), 500);
+
+            return $this->error('Payment verification failed: '.$e->getMessage(), 500);
         }
     }
 
     protected function verifyInternalPayment(Request $request, $user, $gateway): JsonResponse
     {
         $transactionId = $request->transaction_id;
-        if (!$transactionId) {
+        if (! $transactionId) {
             return $this->error('Transaction ID is required for wallet verification', 400);
         }
 
         $transaction = Transaction::find($transactionId);
-        if (!$transaction) {
+        if (! $transaction) {
             return $this->error('Transaction not found', 404);
         }
 
-        if (!$this->userOwnsTransaction($user, $transaction)) {
+        if (! $this->userOwnsTransaction($user, $transaction)) {
             return $this->error('Unauthorized access to transaction', 403);
         }
 
@@ -377,7 +381,7 @@ class PaymentController extends Controller
             $inventorySold = 0;
             $alreadyCompleted = $transaction->status === 'completed';
 
-            if (!$alreadyCompleted) {
+            if (! $alreadyCompleted) {
                 $transaction->update(['status' => 'completed', 'completed_at' => now()]);
             }
 
@@ -385,7 +389,7 @@ class PaymentController extends Controller
                 ['transaction_id' => $transactionId, 'gateway_name' => 'internal'],
                 [
                     'gateway_id' => $gateway->id,
-                    'gateway_transaction_id' => 'WALLET_' . $transactionId . '_' . time(),
+                    'gateway_transaction_id' => 'WALLET_'.$transactionId.'_'.time(),
                     'amount' => $transaction->total,
                     'currency' => $transaction->currency,
                     'status' => 'completed',
@@ -399,7 +403,7 @@ class PaymentController extends Controller
                 ]
             );
 
-            if (!$paymentRecord->wasRecentlyCreated) {
+            if (! $paymentRecord->wasRecentlyCreated) {
                 $paymentRecord->update(['status' => 'completed', 'verified_at' => now()]);
             }
 
@@ -421,7 +425,8 @@ class PaymentController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Internal payment verification failed', ['error' => $e->getMessage()]);
-            return $this->error('Wallet payment verification failed: ' . $e->getMessage(), 500);
+
+            return $this->error('Wallet payment verification failed: '.$e->getMessage(), 500);
         }
     }
 
@@ -490,6 +495,7 @@ class PaymentController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Webhook processing failed', ['gateway' => $gateway, 'error' => $e->getMessage()]);
+
             return response()->json(['success' => false, 'message' => 'Webhook processing failed'], 400);
         }
     }
@@ -500,16 +506,24 @@ class PaymentController extends Controller
         $perPage = $request->get('per_page', 20);
 
         $query = PaymentTransaction::with(['gateway', 'transaction'])
-            ->whereHas('transaction', fn($q) => $q->where('transactionable_id', $user->id)->where('transactionable_type', get_class($user)));
+            ->whereHas('transaction', fn ($q) => $q->where('transactionable_id', $user->id)->where('transactionable_type', get_class($user)));
 
-        if ($request->has('status')) $query->where('status', $request->status);
-        if ($request->has('gateway')) $query->where('gateway_name', $request->gateway);
-        if ($request->has('date_from')) $query->where('created_at', '>=', $request->date_from);
-        if ($request->has('date_to')) $query->where('created_at', '<=', $request->date_to);
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->has('gateway')) {
+            $query->where('gateway_name', $request->gateway);
+        }
+        if ($request->has('date_from')) {
+            $query->where('created_at', '>=', $request->date_from);
+        }
+        if ($request->has('date_to')) {
+            $query->where('created_at', '<=', $request->date_to);
+        }
 
         $transactions = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
-        $transactions->getCollection()->transform(fn($t) => [
+        $transactions->getCollection()->transform(fn ($t) => [
             'id' => $t->id,
             'transaction_id' => $t->transaction_id,
             'gateway' => $t->gateway_name,
@@ -539,7 +553,7 @@ class PaymentController extends Controller
 
         $transaction = PaymentTransaction::with(['gateway', 'transaction'])
             ->where('id', $id)
-            ->whereHas('transaction', fn($q) => $q->where('transactionable_id', $user->id)->where('transactionable_type', get_class($user)))
+            ->whereHas('transaction', fn ($q) => $q->where('transactionable_id', $user->id)->where('transactionable_type', get_class($user)))
             ->firstOrFail();
 
         return $this->success('', [
@@ -571,7 +585,7 @@ class PaymentController extends Controller
 
         if ($transactionId) {
             $transaction = Transaction::find($transactionId);
-            if ($transaction && !empty($transaction->metadata['reserved_inventory_ids'])) {
+            if ($transaction && ! empty($transaction->metadata['reserved_inventory_ids'])) {
                 $items = PlanInventory::whereIn('id', $transaction->metadata['reserved_inventory_ids'])
                     ->where('status', PlanInventory::STATUS_RESERVED)
                     ->get();
@@ -624,7 +638,7 @@ class PaymentController extends Controller
                 ->orWhere('id', $request->payment_reference)
                 ->first();
 
-            if (!$paymentRecord) {
+            if (! $paymentRecord) {
                 return $this->error('Payment not found', 404);
             }
 
@@ -634,7 +648,7 @@ class PaymentController extends Controller
 
             $refundResponse = $this->paymentService->setGateway($request->gateway)->refund($request->payment_reference, $request->amount);
 
-            if (!$refundResponse->isSuccessful()) {
+            if (! $refundResponse->isSuccessful()) {
                 return $this->error($refundResponse->getErrorMessage() ?? 'Refund failed', 400);
             }
 
@@ -667,7 +681,8 @@ class PaymentController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Refund failed', ['error' => $e->getMessage()]);
-            return $this->error('Refund failed: ' . $e->getMessage(), 500);
+
+            return $this->error('Refund failed: '.$e->getMessage(), 500);
         }
     }
 
@@ -675,7 +690,7 @@ class PaymentController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->stripe_customer_id) {
+        if (! $user->stripe_customer_id) {
             return $this->success('', []);
         }
 
@@ -686,7 +701,7 @@ class PaymentController extends Controller
                 'type' => 'card',
             ]);
 
-            $methods = collect($paymentMethods->data)->map(fn($pm) => [
+            $methods = collect($paymentMethods->data)->map(fn ($pm) => [
                 'id' => $pm->id,
                 'brand' => $pm->card->brand,
                 'last4' => $pm->card->last4,
@@ -718,13 +733,13 @@ class PaymentController extends Controller
 
         try {
             $stripeSecret = config('services.stripe.secret');
-            if (!$stripeSecret) {
+            if (! $stripeSecret) {
                 return $this->error('Payment gateway not configured', 500);
             }
 
             $stripe = new StripeClient($stripeSecret);
 
-            if (!$user->stripe_customer_id) {
+            if (! $user->stripe_customer_id) {
                 $customer = $stripe->customers->create([
                     'email' => $user->email,
                     'name' => $user->name,
@@ -738,7 +753,7 @@ class PaymentController extends Controller
                 'customer' => $user->stripe_customer_id,
             ]);
 
-            $shouldSetAsDefault = $request->get('set_as_default', false) || !$user->default_payment_method_id;
+            $shouldSetAsDefault = $request->get('set_as_default', false) || ! $user->default_payment_method_id;
 
             if ($shouldSetAsDefault) {
                 $stripe->customers->update($user->stripe_customer_id, [
@@ -764,6 +779,7 @@ class PaymentController extends Controller
             return $this->error('Invalid payment method', 400);
         } catch (\Exception $e) {
             Log::error('Failed to add payment method', ['error' => $e->getMessage()]);
+
             return $this->error('Failed to add payment method', 500);
         }
     }
@@ -790,6 +806,7 @@ class PaymentController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Failed to remove payment method', ['error' => $e->getMessage()]);
+
             return $this->error('Failed to remove payment method', 500);
         }
     }
@@ -816,6 +833,7 @@ class PaymentController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Failed to set default payment method', ['error' => $e->getMessage()]);
+
             return $this->error('Failed to update default payment method', 500);
         }
     }
@@ -824,7 +842,7 @@ class PaymentController extends Controller
     {
         $gateway = PaymentGateway::where('name', 'stripe')->where('is_active', true)->first();
 
-        if (!$gateway) {
+        if (! $gateway) {
             return $this->error('Stripe gateway not configured', 404);
         }
 
@@ -837,9 +855,9 @@ class PaymentController extends Controller
     public function checkPlanInventory($planId): JsonResponse
     {
         $plan = Plan::withCount([
-            'inventories as available_stock' => fn($q) => $q->where('status', PlanInventory::STATUS_AVAILABLE),
-            'inventories as reserved_stock' => fn($q) => $q->where('status', PlanInventory::STATUS_RESERVED),
-            'inventories as sold_stock' => fn($q) => $q->where('status', PlanInventory::STATUS_SOLD),
+            'inventories as available_stock' => fn ($q) => $q->where('status', PlanInventory::STATUS_AVAILABLE),
+            'inventories as reserved_stock' => fn ($q) => $q->where('status', PlanInventory::STATUS_RESERVED),
+            'inventories as sold_stock' => fn ($q) => $q->where('status', PlanInventory::STATUS_SOLD),
         ])->findOrFail($planId);
 
         return $this->success('', [
@@ -859,6 +877,7 @@ class PaymentController extends Controller
         if (is_string($metadata)) {
             return json_decode($metadata, true) ?: [];
         }
+
         return is_array($metadata) ? $metadata : [];
     }
 
@@ -885,15 +904,23 @@ class PaymentController extends Controller
     protected function success(string $message, $data = null, int $status = 200): JsonResponse
     {
         $response = ['success' => true];
-        if ($message) $response['message'] = $message;
-        if ($data !== null) $response['data'] = $data;
+        if ($message) {
+            $response['message'] = $message;
+        }
+        if ($data !== null) {
+            $response['data'] = $data;
+        }
+
         return response()->json($response, $status);
     }
 
     protected function error(string $message, int $status = 400, $data = null): JsonResponse
     {
         $response = ['success' => false, 'message' => $message];
-        if ($data !== null) $response['data'] = $data;
+        if ($data !== null) {
+            $response['data'] = $data;
+        }
+
         return response()->json($response, $status);
     }
 

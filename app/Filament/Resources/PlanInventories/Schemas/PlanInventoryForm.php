@@ -49,12 +49,12 @@ class PlanInventoryForm
                     ->maxSize(5120)
                     ->columnSpanFull(),
                 Select::make('status')
-                        ->options([
-        1 => 'Available',
-        2 => 'Reserved',
-        3 => 'Sold',     // CORRECT: 3 = Sold
-        4 => 'Expired',  // CORRECT: 4 = Expired
-    ])
+                    ->options([
+                        1 => 'Available',
+                        2 => 'Reserved',
+                        3 => 'Sold',     // CORRECT: 3 = Sold
+                        4 => 'Expired',  // CORRECT: 4 = Expired
+                    ])
 
                     ->native(false),
                 DateTimePicker::make('purchased_at')->native(false),
@@ -94,6 +94,7 @@ class PlanInventoryForm
                                 if (is_array($state)) {
                                     return $state; // Let Eloquent casting handle the JSON encoding
                                 }
+
                                 return [];
                             }),
                     ]),

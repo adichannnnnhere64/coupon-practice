@@ -19,7 +19,7 @@ class PlanTypeResource extends JsonResource
             'description' => $this->description,
             'is_active' => $this->is_active,
             'categories' => CategoryResource::collection($this->whenLoaded('categories')),
-            'plans_count' => $this->whenLoaded('plans', fn() => $this->plans->count()),
+            'plans_count' => $this->whenLoaded('plans', fn () => $this->plans->count()),
             'plan_types' => PlanResource::collection($this->whenLoaded('plans')),
             'image' => $this->getFirstMediaUrl('images'),
             'created_at' => $this->created_at?->toIso8601String(),

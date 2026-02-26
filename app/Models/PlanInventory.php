@@ -11,19 +11,27 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 class PlanInventory extends Model implements HasMedia
 {
-    use HasFactory, SoftDeletes, InteractsWithMedia;
+    use HasFactory, InteractsWithMedia, SoftDeletes;
 
     const STATUS_AVAILABLE = 1;
+
     const STATUS_RESERVED = 2;
+
     const STATUS_SOLD = 3;
+
     const STATUS_EXPIRED = 4;
 
     // Delivery status constants
     const DELIVERY_PENDING = 'pending';
+
     const DELIVERY_QUEUED = 'queued';
+
     const DELIVERY_SENDING = 'sending';
+
     const DELIVERY_SENT = 'sent';
+
     const DELIVERY_FAILED = 'failed';
+
     const DELIVERY_DELIVERED = 'delivered';
 
     protected $fillable = [
@@ -183,6 +191,7 @@ class PlanInventory extends Model implements HasMedia
     public function getCouponUrlAttribute(): ?string
     {
         $media = $this->getFirstMedia('coupon');
+
         return $media ? $media->getUrl() : null;
     }
 
@@ -258,7 +267,7 @@ class PlanInventory extends Model implements HasMedia
     /**
      * Mark delivery as failed
      */
-    public function markDeliveryFailed(string $reason = null): self
+    public function markDeliveryFailed(?string $reason = null): self
     {
         $this->update([
             'delivery_status' => self::DELIVERY_FAILED,
@@ -291,11 +300,12 @@ class PlanInventory extends Model implements HasMedia
      */
     public function canRetryDelivery(): bool
     {
-        if (!$this->plan || !$this->plan->deliveryMethod) {
+        if (! $this->plan || ! $this->plan->deliveryMethod) {
             return false;
         }
 
         $maxAttempts = $this->plan->deliveryMethod->retry_attempts;
+
         return $this->delivery_status === self::DELIVERY_FAILED
             && $this->delivery_attempts < $maxAttempts;
     }
@@ -330,4 +340,3 @@ class PlanInventory extends Model implements HasMedia
             });
     }
 }
-

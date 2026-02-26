@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Plans\RelationManagers;
 
-use App\Filament\Resources\Plans\Tables\PlansTable;
 use App\Models\PlanAttribute;
 use Filament\Actions\AttachAction;
 use Filament\Actions\BulkActionGroup;
@@ -17,8 +16,8 @@ use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;

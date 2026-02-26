@@ -11,8 +11,7 @@ class PlanService
 {
     public function __construct(
         protected PlanRepository $repository
-    ) {
-    }
+    ) {}
 
     public function getAllPlans(array $filters = []): Collection
     {
@@ -32,7 +31,7 @@ class PlanService
 
             $plan = $this->repository->create($data);
 
-            if (!empty($attributes)) {
+            if (! empty($attributes)) {
                 $this->attachAttributesToPlan($plan, $attributes);
             }
 
@@ -45,7 +44,7 @@ class PlanService
         return DB::transaction(function () use ($id, $data) {
             $plan = $this->repository->find($id);
 
-            if (!$plan) {
+            if (! $plan) {
                 throw new \Exception('Plan not found');
             }
 
@@ -66,7 +65,7 @@ class PlanService
     {
         $plan = $this->repository->find($id);
 
-        if (!$plan) {
+        if (! $plan) {
             throw new \Exception('Plan not found');
         }
 

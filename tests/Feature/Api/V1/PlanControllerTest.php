@@ -3,9 +3,9 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Models\Plan;
-use App\Models\PlanType;
 use App\Models\PlanAttribute;
 use App\Models\PlanInventory;
+use App\Models\PlanType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -29,8 +29,8 @@ describe('PlanController', function () {
                             'actual_price',
                             'base_price',
                             'is_active',
-                        ]
-                    ]
+                        ],
+                    ],
                 ])
                 ->assertJsonCount(5, 'data');
         });
@@ -121,13 +121,13 @@ describe('PlanController', function () {
                                 'name',
                                 'value',
                                 'is_unlimited',
-                            ]
+                            ],
                         ],
                         'plan_type' => [
                             'id',
                             'name',
-                        ]
-                    ]
+                        ],
+                    ],
                 ])
                 ->assertJsonPath('data.id', $plan->id);
         });
@@ -183,8 +183,8 @@ describe('PlanController', function () {
                             'total',
                             'available',
                             'available_codes',
-                        ]
-                    ]
+                        ],
+                    ],
                 ])
                 ->assertJsonPath('data.stock_summary.total', 7)
                 ->assertJsonPath('data.stock_summary.available', 5)

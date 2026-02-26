@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use App\Models\PlanType;
 use App\Models\Plan;
 use App\Models\PlanAttribute;
 use App\Models\PlanInventory;
+use App\Models\PlanType;
 use Illuminate\Database\Seeder;
 
 class PlanSeeder extends Seeder

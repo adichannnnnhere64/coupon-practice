@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\PlanInventories\Tables;
 
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
@@ -22,20 +21,19 @@ class PlanInventoriesTable
             ->columns([
                 TextColumn::make('code')
                     ->searchable(),
-                                TextColumn::make('status')
-                ->formatStateUsing(fn ($state) => match ($state) {
-                    1 => 'Available',
-                    2 => 'Reserved',
-                    3 => 'Sold',
-                    4 => 'Expired',
-                    default => 'Unknown',
-                })
+                TextColumn::make('status')
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        1 => 'Available',
+                        2 => 'Reserved',
+                        3 => 'Sold',
+                        4 => 'Expired',
+                        default => 'Unknown',
+                    })
                     ->badge(),
 
-                   ViewColumn::make('file_actions')
-                ->label('File')
-                ->view('filament.tables.columns.file-actions'),
-
+                ViewColumn::make('file_actions')
+                    ->label('File')
+                    ->view('filament.tables.columns.file-actions'),
 
                 TextColumn::make('purchased_at')
                     ->dateTime()

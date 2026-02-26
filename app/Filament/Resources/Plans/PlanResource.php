@@ -47,7 +47,7 @@ class PlanResource extends Resource
     {
         return [
             AttributesRelationManager::class,
-            InventoriesRelationManager::class
+            InventoriesRelationManager::class,
         ];
     }
 

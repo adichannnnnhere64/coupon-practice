@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Http\Controllers\Controller;
-use Adichan\Transaction\Interfaces\TransactionRepositoryInterface;
 use Adichan\Payment\Models\PaymentTransaction;
-use Illuminate\Http\Request;
+use Adichan\Transaction\Interfaces\TransactionRepositoryInterface;
+use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class OrderController extends Controller
 {
@@ -64,9 +63,9 @@ class OrderController extends Controller
             // Apply search filter
             if ($request->has('search')) {
                 $search = $request->search;
-                $query->where(function($q) use ($search) {
+                $query->where(function ($q) use ($search) {
                     $q->where('description', 'like', "%{$search}%")
-                      ->orWhere('id', 'like', "%{$search}%");
+                        ->orWhere('id', 'like', "%{$search}%");
                 });
             }
 
@@ -116,7 +115,7 @@ class OrderController extends Controller
 
                 return [
                     'id' => $transaction->id,
-                    'order_id' => 'ORD-' . str_pad($transaction->id, 5, '0', STR_PAD_LEFT),
+                    'order_id' => 'ORD-'.str_pad($transaction->id, 5, '0', STR_PAD_LEFT),
                     'status' => $transaction->status,
                     'total' => (float) $transaction->total,
                     'description' => $transaction->description,
@@ -200,7 +199,7 @@ class OrderController extends Controller
             // Format transaction
             $order = [
                 'id' => $transaction->id,
-                'order_id' => 'ORD-' . str_pad($transaction->id, 5, '0', STR_PAD_LEFT),
+                'order_id' => 'ORD-'.str_pad($transaction->id, 5, '0', STR_PAD_LEFT),
                 'status' => $transaction->status,
                 'total' => (float) $transaction->total,
                 'description' => $transaction->description,
@@ -292,7 +291,7 @@ class OrderController extends Controller
                 // Find the itemable object
                 $itemable = $itemableClass::find($itemableId);
 
-                if (!$itemable) {
+                if (! $itemable) {
                     throw new \Exception("Item not found: {$itemableClass} with ID {$itemableId}");
                 }
 
@@ -312,7 +311,7 @@ class OrderController extends Controller
                 'success' => true,
                 'data' => [
                     'order_id' => $transaction->id,
-                    'order_number' => 'ORD-' . str_pad($transaction->id, 5, '0', STR_PAD_LEFT),
+                    'order_number' => 'ORD-'.str_pad($transaction->id, 5, '0', STR_PAD_LEFT),
                     'status' => $transaction->status,
                     'total' => $transaction->total,
                     'items_count' => $transaction->items->count(),
@@ -446,7 +445,7 @@ class OrderController extends Controller
                 $payment = PaymentTransaction::where('transaction_id', $transaction->id)->first();
 
                 return [
-                    'Order ID' => 'ORD-' . str_pad($transaction->id, 5, '0', STR_PAD_LEFT),
+                    'Order ID' => 'ORD-'.str_pad($transaction->id, 5, '0', STR_PAD_LEFT),
                     'Date' => $transaction->created_at->format('Y-m-d H:i:s'),
                     'Status' => ucfirst($transaction->status),
                     'Description' => $transaction->description,
@@ -464,7 +463,7 @@ class OrderController extends Controller
                     'success' => true,
                     'data' => [
                         'format' => 'csv',
-                        'filename' => 'orders_export_' . date('Y-m-d_H-i-s') . '.csv',
+                        'filename' => 'orders_export_'.date('Y-m-d_H-i-s').'.csv',
                         'records_count' => $exportData->count(),
                         'csv_data' => $exportData->toArray(),
                     ],
@@ -537,12 +536,12 @@ class OrderController extends Controller
      */
     private function getPaymentMethodInfo(PaymentTransaction $payment): string
     {
-        if (!$payment->payment_method) {
+        if (! $payment->payment_method) {
             return ucfirst($payment->gateway_name);
         }
 
         if ($payment->payment_method === 'card' && isset($payment->payer_info['card_last4'])) {
-            return 'Card •••• ' . $payment->payer_info['card_last4'];
+            return 'Card •••• '.$payment->payer_info['card_last4'];
         }
 
         if ($payment->payment_method === 'wallet') {

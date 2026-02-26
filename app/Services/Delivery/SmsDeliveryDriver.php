@@ -13,17 +13,19 @@ class SmsDeliveryDriver implements DeliveryDriverInterface
     protected ?DeliveryMethod $method = null;
 
     const PROVIDER_TWILIO = 'twilio';
+
     const PROVIDER_NEXMO = 'nexmo';
 
     public function setMethod(DeliveryMethod $method): self
     {
         $this->method = $method;
+
         return $this;
     }
 
     public function deliver(PlanInventory $inventory, User $user): DeliveryResult
     {
-        if (!$this->method) {
+        if (! $this->method) {
             return DeliveryResult::failure('Delivery method not configured');
         }
 
@@ -32,7 +34,7 @@ class SmsDeliveryDriver implements DeliveryDriverInterface
 
         // Get user's phone number from profile or metadata
         $phoneNumber = $user->phone ?? $user->meta_data['phone'] ?? null;
-        if (!$phoneNumber) {
+        if (! $phoneNumber) {
             return DeliveryResult::failure('User does not have a phone number configured');
         }
 
@@ -60,7 +62,7 @@ class SmsDeliveryDriver implements DeliveryDriverInterface
                 'error' => $e->getMessage(),
             ]);
 
-            return DeliveryResult::failure('SMS delivery failed: ' . $e->getMessage());
+            return DeliveryResult::failure('SMS delivery failed: '.$e->getMessage());
         }
     }
 
@@ -74,12 +76,12 @@ class SmsDeliveryDriver implements DeliveryDriverInterface
         $provider = $credentials['provider'] ?? self::PROVIDER_TWILIO;
 
         return match ($provider) {
-            self::PROVIDER_TWILIO => !empty($credentials['account_sid'])
-                && !empty($credentials['auth_token'])
-                && !empty($credentials['from_number']),
-            self::PROVIDER_NEXMO => !empty($credentials['api_key'])
-                && !empty($credentials['api_secret'])
-                && !empty($credentials['from_number']),
+            self::PROVIDER_TWILIO => ! empty($credentials['account_sid'])
+                && ! empty($credentials['auth_token'])
+                && ! empty($credentials['from_number']),
+            self::PROVIDER_NEXMO => ! empty($credentials['api_key'])
+                && ! empty($credentials['api_secret'])
+                && ! empty($credentials['from_number']),
             default => false,
         };
     }
@@ -88,7 +90,7 @@ class SmsDeliveryDriver implements DeliveryDriverInterface
     {
         $plan = $inventory->plan;
         $template = $this->method->getSetting('message_template',
-            "Your coupon code for {plan_name}: {code}. View details at: {url}"
+            'Your coupon code for {plan_name}: {code}. View details at: {url}'
         );
 
         return str_replace(
@@ -114,13 +116,14 @@ class SmsDeliveryDriver implements DeliveryDriverInterface
 
         if ($response->successful()) {
             $data = $response->json();
+
             return DeliveryResult::success('SMS sent via Twilio', [
                 'provider' => 'twilio',
                 'message_sid' => $data['sid'] ?? null,
             ])->withExternalReference($data['sid'] ?? '');
         }
 
-        throw new \Exception('Twilio API error: ' . $response->body());
+        throw new \Exception('Twilio API error: '.$response->body());
     }
 
     protected function sendViaNexmo(string $to, string $message, array $credentials): DeliveryResult
@@ -141,9 +144,9 @@ class SmsDeliveryDriver implements DeliveryDriverInterface
                     'message_id' => $data['messages'][0]['message-id'] ?? null,
                 ])->withExternalReference($data['messages'][0]['message-id'] ?? '');
             }
-            throw new \Exception('Nexmo error: ' . ($data['messages'][0]['error-text'] ?? 'Unknown error'));
+            throw new \Exception('Nexmo error: '.($data['messages'][0]['error-text'] ?? 'Unknown error'));
         }
 
-        throw new \Exception('Nexmo API error: ' . $response->body());
+        throw new \Exception('Nexmo API error: '.$response->body());
     }
 }

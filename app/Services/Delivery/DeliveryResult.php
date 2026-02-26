@@ -45,6 +45,7 @@ class DeliveryResult
     {
         $this->externalReference = $reference;
         $this->metadata['external_reference'] = $reference;
+
         return $this;
     }
 

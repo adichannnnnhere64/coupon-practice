@@ -5,13 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
-use Illuminate\Support\Facades\DB;
 
 class Plan extends Model implements HasMedia
 {
-    use HasFactory, SoftDeletes, InteractsWithMedia;
+    use HasFactory, InteractsWithMedia, SoftDeletes;
 
     protected $fillable = [
         'plan_type_id',
@@ -114,7 +114,7 @@ class Plan extends Model implements HasMedia
      */
     public function hasAvailableInventory(int $quantity = 1): bool
     {
-        if (!$this->inventory_enabled) {
+        if (! $this->inventory_enabled) {
             return true; // Unlimited inventory
         }
 
@@ -126,7 +126,7 @@ class Plan extends Model implements HasMedia
      */
     public function getInStockAttribute(): bool
     {
-        if (!$this->inventory_enabled) {
+        if (! $this->inventory_enabled) {
             return true;
         }
 
@@ -138,7 +138,7 @@ class Plan extends Model implements HasMedia
      */
     public function getIsLowStockAttribute(): bool
     {
-        if (!$this->inventory_enabled || $this->availableStock <= 0) {
+        if (! $this->inventory_enabled || $this->availableStock <= 0) {
             return false;
         }
 
@@ -150,7 +150,7 @@ class Plan extends Model implements HasMedia
      */
     public function getIsOutOfStockAttribute(): bool
     {
-        if (!$this->inventory_enabled) {
+        if (! $this->inventory_enabled) {
             return false;
         }
 
@@ -162,7 +162,7 @@ class Plan extends Model implements HasMedia
      */
     public function reserveInventory(int $quantity = 1, ?array $metadata = []): array
     {
-        if (!$this->hasAvailableInventory($quantity)) {
+        if (! $this->hasAvailableInventory($quantity)) {
             throw new \Exception("Insufficient inventory available for plan: {$this->name}");
         }
 
@@ -207,7 +207,7 @@ class Plan extends Model implements HasMedia
                     'status' => PlanInventory::STATUS_AVAILABLE,
                     'user_id' => null,
                     'sold_at' => null,
-                    'meta_data' => DB::raw("JSON_SET(COALESCE(meta_data, '{}'), '$.released_at', '" . now()->toIso8601String() . "')")
+                    'meta_data' => DB::raw("JSON_SET(COALESCE(meta_data, '{}'), '$.released_at', '".now()->toIso8601String()."')"),
                 ]);
         });
     }
@@ -227,7 +227,7 @@ class Plan extends Model implements HasMedia
                     'status' => 'sold',
                     'user_id' => $userId,
                     'sold_at' => $now,
-                    'meta_data' => DB::raw("JSON_SET(COALESCE(meta_data, '{}'), '$.sold_at', '" . $now->toIso8601String() . "')")
+                    'meta_data' => DB::raw("JSON_SET(COALESCE(meta_data, '{}'), '$.sold_at', '".$now->toIso8601String()."')"),
                 ]);
         });
     }
@@ -237,11 +237,11 @@ class Plan extends Model implements HasMedia
      */
     public function scopeInStock($query)
     {
-        return $query->where(function($q) {
+        return $query->where(function ($q) {
             $q->where('inventory_enabled', false)
-              ->orWhereHas('inventories', function($q2) {
-                  $q2->where('status', PlanInventory::STATUS_AVAILABLE);
-              });
+                ->orWhereHas('inventories', function ($q2) {
+                    $q2->where('status', PlanInventory::STATUS_AVAILABLE);
+                });
         });
     }
 
@@ -251,11 +251,11 @@ class Plan extends Model implements HasMedia
     public function scopeLowStock($query)
     {
         return $query->where('inventory_enabled', true)
-            ->whereHas('inventories', function($q) {
+            ->whereHas('inventories', function ($q) {
                 $q->selectRaw('count(*) as stock')
-                  ->where('status', PlanInventory::STATUS_AVAILABLE)
-                  ->havingRaw('stock <= plans.low_stock_threshold')
-                  ->havingRaw('stock > 0');
+                    ->where('status', PlanInventory::STATUS_AVAILABLE)
+                    ->havingRaw('stock <= plans.low_stock_threshold')
+                    ->havingRaw('stock > 0');
             });
     }
 
@@ -265,7 +265,7 @@ class Plan extends Model implements HasMedia
     public function scopeOutOfStock($query)
     {
         return $query->where('inventory_enabled', true)
-            ->whereDoesntHave('inventories', function($q) {
+            ->whereDoesntHave('inventories', function ($q) {
                 $q->where('status', PlanInventory::STATUS_AVAILABLE);
             });
     }
@@ -280,19 +280,19 @@ class Plan extends Model implements HasMedia
     }
 
     /**
- * Update inventory counts on plan
- */
-public function updateInventoryCounts(): void
-{
-    if (!$this->inventory_enabled) {
-        return;
-    }
+     * Update inventory counts on plan
+     */
+    public function updateInventoryCounts(): void
+    {
+        if (! $this->inventory_enabled) {
+            return;
+        }
 
-    $this->update([
-        'total_inventory' => $this->inventories()->count(),
-        'available_inventory' => $this->inventories()->where('status', PlanInventory::STATUS_AVAILABLE)->count(),
-        'reserved_inventory' => $this->inventories()->where('status', PlanInventory::STATUS_RESERVED)->count(),
-        'sold_inventory' => $this->inventories()->where('status', PlanInventory::STATUS_SOLD)->count(),
-    ]);
-}
+        $this->update([
+            'total_inventory' => $this->inventories()->count(),
+            'available_inventory' => $this->inventories()->where('status', PlanInventory::STATUS_AVAILABLE)->count(),
+            'reserved_inventory' => $this->inventories()->where('status', PlanInventory::STATUS_RESERVED)->count(),
+            'sold_inventory' => $this->inventories()->where('status', PlanInventory::STATUS_SOLD)->count(),
+        ]);
+    }
 }

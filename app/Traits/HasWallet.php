@@ -107,7 +107,6 @@ trait HasWallet
             return false;
         }
 
-
         try {
             return $this->getWalletService()->transferFunds($this, $recipient, $amount, $description, $meta);
         } catch (\Exception $e) {

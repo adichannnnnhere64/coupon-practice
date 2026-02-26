@@ -39,25 +39,28 @@ class DeliveryService
             ->get();
 
         foreach ($inventories as $inventory) {
-            if (!$inventory->plan || !$inventory->plan->deliveryMethod) {
+            if (! $inventory->plan || ! $inventory->plan->deliveryMethod) {
                 Log::info('Skipping delivery - no delivery method configured', [
                     'inventory_id' => $inventory->id,
                 ]);
+
                 continue;
             }
 
             $deliveryMethod = $inventory->plan->deliveryMethod;
-            if (!$deliveryMethod->is_active) {
+            if (! $deliveryMethod->is_active) {
                 Log::info('Skipping delivery - delivery method inactive', [
                     'inventory_id' => $inventory->id,
                     'delivery_method_id' => $deliveryMethod->id,
                 ]);
+
                 continue;
             }
 
             // Manual delivery type doesn't get queued
             if ($deliveryMethod->type === DeliveryMethod::TYPE_MANUAL) {
                 $inventory->update(['delivery_status' => PlanInventory::DELIVERY_PENDING]);
+
                 continue;
             }
 
@@ -83,18 +86,18 @@ class DeliveryService
      */
     public function processDelivery(PlanInventory $inventory, User $user): DeliveryResult
     {
-        if (!$inventory->plan || !$inventory->plan->deliveryMethod) {
+        if (! $inventory->plan || ! $inventory->plan->deliveryMethod) {
             return DeliveryResult::failure('No delivery method configured for this plan');
         }
 
         $deliveryMethod = $inventory->plan->deliveryMethod;
 
-        if (!$deliveryMethod->is_active) {
+        if (! $deliveryMethod->is_active) {
             return DeliveryResult::failure('Delivery method is inactive');
         }
 
         $driver = $this->getDriver($deliveryMethod->type);
-        if (!$driver) {
+        if (! $driver) {
             return DeliveryResult::failure("No driver available for delivery type: {$deliveryMethod->type}");
         }
 
@@ -118,7 +121,7 @@ class DeliveryService
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            $result = DeliveryResult::failure('Delivery error: ' . $e->getMessage());
+            $result = DeliveryResult::failure('Delivery error: '.$e->getMessage());
             $this->handleFailure($inventory, $result);
 
             return $result;
@@ -175,7 +178,7 @@ class DeliveryService
 
         $retried = 0;
         foreach ($items as $item) {
-            if (!$item->user) {
+            if (! $item->user) {
                 continue;
             }
 
