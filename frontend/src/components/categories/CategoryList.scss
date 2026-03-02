@@ -7,6 +7,10 @@
     align-items: center;
     gap: var(--spacing-sm);
     padding: 0 var(--spacing-md);
+
+    @media (max-width: 768px) {
+      display: block;
+    }
   }
 
   &__scroll {
@@ -18,6 +22,11 @@
     -ms-overflow-style: none;
     padding: var(--spacing-sm) 0;
     flex: 1;
+
+    @media (max-width: 768px) {
+      overflow-x: visible;
+      flex-wrap: wrap;
+    }
 
     &::-webkit-scrollbar {
       display: none;
@@ -33,8 +42,8 @@
     max-width: 280px;
 
     @media (max-width: 768px) {
-      min-width: 85vw;
-      max-width: 90vw;
+      min-width: 100%;
+      max-width: 100%;
     }
 
     @media (max-width: 480px) {

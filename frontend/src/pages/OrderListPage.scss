@@ -1,4 +1,23 @@
 .order-list-page {
+  // Show/hide views based on screen size
+  .desktop-view {
+    display: block;
+  }
+
+  .mobile-view {
+    display: none;
+  }
+
+  @media (max-width: 767px) {
+    .desktop-view {
+      display: none;
+    }
+
+    .mobile-view {
+      display: block;
+    }
+  }
+
   .stats-overview {
     .stat-card {
       height: 100%;
@@ -177,52 +196,6 @@
   }
 }
 
-// Mobile responsive table
-@media (max-width: 767px) {
-  .order-list-page {
-    .orders-table {
-      table.orders-table {
-        display: block;
-
-        thead {
-          display: none;
-        }
-
-        tbody {
-          display: block;
-
-          tr {
-            display: block;
-            margin-bottom: 15px;
-            padding: 15px;
-            border: 1px solid var(--ion-color-light);
-            border-radius: 8px;
-          }
-
-          td {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid var(--ion-color-light);
-
-            &:before {
-              content: attr(data-label);
-              font-weight: 600;
-              color: var(--ion-color-dark);
-              margin-right: 10px;
-              min-width: 100px;
-            }
-
-            &:last-child {
-              border-bottom: none;
-            }
-          }
-        }
-      }
-    }
-  }
-}
 
 .inventory-items-section {
   margin-top: 16px;
@@ -282,5 +255,183 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
+  }
+}
+
+// Mobile Accordion View
+.orders-accordion {
+  padding: 8px;
+
+  ion-accordion-group {
+    background: transparent;
+  }
+
+  ion-accordion {
+    margin-bottom: 8px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--ion-card-background, var(--ion-background-color));
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+    &.accordion-expanded {
+      .order-accordion-header {
+        --background: var(--ion-color-light);
+      }
+    }
+  }
+
+  .order-accordion-header {
+    --padding-start: 12px;
+    --padding-end: 12px;
+    --inner-padding-end: 0;
+
+    .order-header-content {
+      width: 100%;
+      padding: 8px 0;
+    }
+
+    .order-header-main {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+
+      .order-id {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--ion-color-dark);
+      }
+
+      ion-chip {
+        margin: 0;
+        height: 24px;
+        font-size: 0.7rem;
+
+        ion-icon {
+          font-size: 12px;
+        }
+
+        ion-label {
+          font-size: 0.7rem;
+        }
+      }
+    }
+
+    .order-header-sub {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      .order-desc {
+        font-size: 0.8rem;
+        color: var(--ion-color-medium);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 60%;
+      }
+
+      .order-total {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--ion-color-primary);
+      }
+    }
+  }
+
+  .order-accordion-content {
+    padding: 0 12px 12px;
+    background: var(--ion-color-light-tint);
+
+    ion-list {
+      background: transparent;
+      padding: 0;
+
+      ion-item {
+        --background: transparent;
+        --padding-start: 0;
+        --inner-padding-end: 0;
+        --min-height: 40px;
+
+        ion-label {
+          margin: 4px 0;
+
+          p {
+            font-size: 0.7rem;
+            color: var(--ion-color-medium);
+            margin-bottom: 2px;
+          }
+
+          h3 {
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin: 0;
+          }
+        }
+      }
+    }
+
+    .order-accordion-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+
+      ion-button {
+        flex: 1;
+        margin: 0;
+        --padding-top: 8px;
+        --padding-bottom: 8px;
+        font-size: 0.8rem;
+      }
+    }
+  }
+}
+
+// Compact stats for mobile
+@media (max-width: 767px) {
+  .order-list-page {
+    .stats-overview {
+      padding: 8px;
+
+      ion-col {
+        padding: 4px;
+      }
+
+      .stat-card {
+        padding: 8px;
+
+        h3 {
+          font-size: 1.2rem;
+        }
+
+        p {
+          font-size: 0.7rem;
+        }
+      }
+    }
+
+    .controls-section {
+      padding: 8px;
+
+      ion-searchbar {
+        --padding-start: 8px;
+        --padding-end: 8px;
+      }
+
+      ion-col {
+        padding: 4px;
+      }
+    }
+
+    .export-section {
+      .export-content {
+        flex-direction: column;
+        text-align: center;
+
+        ion-button {
+          width: 100%;
+        }
+      }
+    }
   }
 }

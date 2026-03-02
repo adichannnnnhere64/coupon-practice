@@ -28,6 +28,8 @@ import {
   IonChip,
   IonList,
   IonListHeader,
+  IonAccordionGroup,
+  IonAccordion,
 } from '@ionic/react';
 import {
   search,
@@ -53,7 +55,7 @@ import './OrderListPage.scss';
 import { useAuth } from '@services/useApi';
 import apiClient from '@services/APIService';
 import FileViewer from '@components/FileViewer';
-import { useHistory } from 'react-router';
+import { useHistory, useLocation } from 'react-router';
 
 interface OrderItem {
   id: number;
@@ -120,6 +122,7 @@ const sortOptions = [
 const OrderListPage: React.FC = () => {
   const {  isAuthenticated } = useAuth();
   const history = useHistory();
+  const location = useLocation();
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -263,7 +266,14 @@ const OrderListPage: React.FC = () => {
     sessionStorage.removeItem('refresh_orders');
     fetchOrders(1);
   }
-}, []);
+  // Also refresh if navigated from checkout with purchase data
+  const state = location.state as { purchase?: any } | undefined;
+  if (state?.purchase) {
+    fetchOrders(1);
+    // Clear the state to avoid re-fetching on subsequent renders
+    history.replace(location.pathname, {});
+  }
+}, [location.key]);
 
       const [couponCode, setCouponCode] = useState(null);
 const [loadingCode, setLoadingCode] = useState(false);
@@ -508,93 +518,171 @@ useEffect(() => {
     }
 
     return (
-      <div className="orders-table ion-padding">
-        <IonCard>
-          <IonCardContent>
-            <div className="table-responsive">
-              <table className="orders-table">
-                <thead>
-                  <tr>
-                    <th>Order ID</th>
-                    <th>Description</th>
-                    <th>Date</th>
-                    <th>Items</th>
-                    <th>Total</th>
-                    <th>Payment</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orders.map((order) => (
-                    <tr key={order.id}>
-                      <td data-label="Order ID">
-                        <strong>{order.order_id}</strong>
-                      </td>
-                      <td data-label="Description">
-                        <div className="order-description">
-                          <strong>{order.description}</strong>
-                          {order.metadata?.notes && (
-                            <p className="order-notes">{order.metadata.notes}</p>
-                          )}
-                        </div>
-                      </td>
-                      <td data-label="Date">
-                        {order.formatted_date}
-                      </td>
-                      <td data-label="Items">
-                        <IonBadge color="light">
-                          <IonIcon icon={cart} style={{ marginRight: '4px' }} />
-                          {order.items_count} items
-                        </IonBadge>
-                      </td>
-                      <td data-label="Total">
-                        <strong>{formatCurrency(order.total)}</strong>
-                      </td>
-                      <td data-label="Payment">
-                        <div className="payment-method">
+      <>
+        {/* Desktop Table View */}
+        <div className="orders-table desktop-view ion-padding">
+          <IonCard>
+            <IonCardContent>
+              <div className="table-responsive">
+                <table className="orders-table">
+                  <thead>
+                    <tr>
+                      <th>Order ID</th>
+                      <th>Description</th>
+                      <th>Date</th>
+                      <th>Items</th>
+                      <th>Total</th>
+                      <th>Payment</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.map((order) => (
+                      <tr key={order.id}>
+                        <td data-label="Order ID">
+                          <strong>{order.order_id}</strong>
+                        </td>
+                        <td data-label="Description">
+                          <div className="order-description">
+                            <strong>{order.description}</strong>
+                            {order.metadata?.notes && (
+                              <p className="order-notes">{order.metadata.notes}</p>
+                            )}
+                          </div>
+                        </td>
+                        <td data-label="Date">
+                          {order.formatted_date}
+                        </td>
+                        <td data-label="Items">
+                          <IonBadge color="light">
+                            <IonIcon icon={cart} style={{ marginRight: '4px' }} />
+                            {order.items_count} items
+                          </IonBadge>
+                        </td>
+                        <td data-label="Total">
+                          <strong>{formatCurrency(order.total)}</strong>
+                        </td>
+                        <td data-label="Payment">
+                          <div className="payment-method">
+                            <IonIcon
+                              icon={getPaymentMethodIcon(order.payment_method)}
+                              style={{ marginRight: '6px', verticalAlign: 'middle' }}
+                            />
+                            <span>{order.payment_method || 'Not paid'}</span>
+                          </div>
+                        </td>
+                        <td data-label="Status">
+                          {getStatusBadge(order.status)}
+                        </td>
+                        <td data-label="Actions">
+                          <div className="action-buttons">
+                            <IonButton
+                              size="small"
+                              fill="clear"
+                              onClick={() => handleShowOrderDetails(order)}
+                            >
+                              <IonIcon slot="icon-only" icon={informationCircle} />
+                            </IonButton>
+                            {canCancelOrder(order) && (
+                              <IonButton
+                                size="small"
+                                fill="clear"
+                                color="danger"
+                                onClick={() => {
+                                  setCancellingOrderId(order.id);
+                                  setShowCancelConfirm(true);
+                                }}
+                              >
+                                <IonIcon slot="icon-only" icon={ban} />
+                              </IonButton>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </IonCardContent>
+          </IonCard>
+        </div>
+
+        {/* Mobile Accordion View */}
+        <div className="orders-accordion mobile-view ion-padding">
+          <IonAccordionGroup>
+            {orders.map((order) => (
+              <IonAccordion key={order.id} value={`order-${order.id}`}>
+                <IonItem slot="header" className="order-accordion-header">
+                  <div className="order-header-content">
+                    <div className="order-header-main">
+                      <span className="order-id">{order.order_id}</span>
+                      {getStatusBadge(order.status)}
+                    </div>
+                    <div className="order-header-sub">
+                      <span className="order-desc">{order.description}</span>
+                      <span className="order-total">{formatCurrency(order.total)}</span>
+                    </div>
+                  </div>
+                </IonItem>
+                <div slot="content" className="order-accordion-content">
+                  <IonList lines="none">
+                    <IonItem>
+                      <IonLabel>
+                        <p>Date</p>
+                        <h3>{order.formatted_date}</h3>
+                      </IonLabel>
+                    </IonItem>
+                    <IonItem>
+                      <IonLabel>
+                        <p>Items</p>
+                        <h3>1 item(s)</h3>
+                      </IonLabel>
+                    </IonItem>
+                    <IonItem>
+                      <IonLabel>
+                        <p>Payment</p>
+                        <h3>
                           <IonIcon
                             icon={getPaymentMethodIcon(order.payment_method)}
                             style={{ marginRight: '6px', verticalAlign: 'middle' }}
                           />
-                          <span>{order.payment_method || 'Not paid'}</span>
-                        </div>
-                      </td>
-                      <td data-label="Status">
-                        {getStatusBadge(order.status)}
-                      </td>
-                      <td data-label="Actions">
-                        <div className="action-buttons">
-                          <IonButton
-                            size="small"
-                            fill="clear"
-                            onClick={() => handleShowOrderDetails(order)}
-                          >
-                            <IonIcon slot="icon-only" icon={informationCircle} />
-                          </IonButton>
-                          {canCancelOrder(order) && (
-                            <IonButton
-                              size="small"
-                              fill="clear"
-                              color="danger"
-                              onClick={() => {
-                                setCancellingOrderId(order.id);
-                                setShowCancelConfirm(true);
-                              }}
-                            >
-                              <IonIcon slot="icon-only" icon={ban} />
-                            </IonButton>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </IonCardContent>
-        </IonCard>
-      </div>
+                          {order.payment_method || 'Not paid'}
+                        </h3>
+                      </IonLabel>
+                    </IonItem>
+                  </IonList>
+                  <div className="order-accordion-actions">
+                    <IonButton
+                      size="small"
+                      expand="block"
+                      onClick={() => handleShowOrderDetails(order)}
+                    >
+                      <IonIcon slot="start" icon={informationCircle} />
+                      View Details
+                    </IonButton>
+                    {canCancelOrder(order) && (
+                      <IonButton
+                        size="small"
+                        expand="block"
+                        color="danger"
+                        fill="outline"
+                        onClick={() => {
+                          setCancellingOrderId(order.id);
+                          setShowCancelConfirm(true);
+                        }}
+                      >
+                        <IonIcon slot="start" icon={ban} />
+                        Cancel
+                      </IonButton>
+                    )}
+                  </div>
+                </div>
+              </IonAccordion>
+            ))}
+          </IonAccordionGroup>
+        </div>
+      </>
     );
   };
 

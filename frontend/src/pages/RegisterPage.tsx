@@ -194,7 +194,7 @@ const RegisterPage: React.FC = () => {
                 <div className="logo-circle">
                   <IonIcon icon={checkmarkCircleOutline} className="logo-icon" />
                 </div>
-                <h1 className="app-title">Join Swag Coupons Coupons</h1>
+                <h1 className="app-title">Join Swag Coupons</h1>
                 <p className="app-subtitle">Create your account to get started</p>
               </div>
 
@@ -277,7 +277,7 @@ const RegisterPage: React.FC = () => {
                       <small>{passwordError}</small>
                     </IonText>
                   )}
-                  
+
                   {/* Password Strength Indicator */}
                   {password && !passwordError && (
                     <div className="password-strength">
