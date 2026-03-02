@@ -38,6 +38,7 @@ class PaymentController extends Controller
             'currency' => 'string|size:3',
             'description' => 'string|max:255',
             'metadata' => 'array',
+            'delivery_method_id' => 'nullable|integer|exists:delivery_methods,id',
         ]);
 
         if ($validator->fails()) {
@@ -58,6 +59,8 @@ class PaymentController extends Controller
             // Inventory check for plan purchases
             $plan = null;
             $reservedIds = [];
+            $deliveryMethodId = $request->delivery_method_id;
+
             if ($purchaseType === 'plan_purchase' && isset($metadata['plan_id'])) {
                 $plan = Plan::find($metadata['plan_id']);
                 if ($plan && $plan->inventory_enabled) {
@@ -66,6 +69,25 @@ class PaymentController extends Controller
                         return $this->error('Plan is out of stock', 400, ['available_stock' => $available]);
                     }
                 }
+
+                // Validate delivery method if provided
+                if ($deliveryMethodId && $plan) {
+                    $validDeliveryMethod = $plan->deliveryMethods()
+                        ->where('delivery_methods.id', $deliveryMethodId)
+                        ->where('delivery_methods.is_active', true)
+                        ->exists();
+
+                    if (! $validDeliveryMethod) {
+                        return $this->error('Invalid delivery method for this plan', 400);
+                    }
+                }
+
+                // Enforce delivery method selection if plan has delivery methods
+                if ($plan && $plan->deliveryMethods()->where('is_active', true)->exists() && ! $deliveryMethodId) {
+                    return $this->error('Please select a delivery method', 400, [
+                        'requires_delivery_method' => true,
+                    ]);
+                }
             }
 
             $transactionRepo = app(\Adichan\Transaction\Interfaces\TransactionRepositoryInterface::class);
@@ -73,6 +95,7 @@ class PaymentController extends Controller
                 'purchase_type' => $purchaseType,
                 'user_email' => $user->email,
                 'gateway' => $request->gateway,
+                'delivery_method_id' => $deliveryMethodId,
             ]);
 
             $transaction = $transactionRepo->createForTransactionable($user, [
@@ -253,7 +276,8 @@ class PaymentController extends Controller
                 $inventorySold = count($soldIds);
 
                 if (! empty($soldIds)) {
-                    $this->deliveryService->queueDelivery($soldIds, $user);
+                    $deliveryMethodId = $metadata['delivery_method_id'] ?? null;
+                    $this->deliveryService->queueDelivery($soldIds, $user, $deliveryMethodId);
                 }
             }
 
@@ -344,9 +368,9 @@ class PaymentController extends Controller
                     $inventorySold = count($soldIds);
 
                     if (! empty($soldIds)) {
-                        $this->deliveryService->queueDelivery($soldIds, $user);
+                        $deliveryMethodId = $metadata['delivery_method_id'] ?? null;
+                        $this->deliveryService->queueDelivery($soldIds, $user, $deliveryMethodId);
                     }
-
                 }
 
                 // Handle credit purchases - add credits to wallet
@@ -425,10 +449,10 @@ class PaymentController extends Controller
                 $soldIds = $this->sellReservedInventory($metadata, $user->id);
                 $inventorySold = count($soldIds);
 
-                if (!empty($soldIds)) {
-                    $this->deliveryService->queueDelivery($soldIds, $user);
+                if (! empty($soldIds)) {
+                    $deliveryMethodId = $metadata['delivery_method_id'] ?? null;
+                    $this->deliveryService->queueDelivery($soldIds, $user, $deliveryMethodId);
                 }
-
             }
 
             DB::commit();

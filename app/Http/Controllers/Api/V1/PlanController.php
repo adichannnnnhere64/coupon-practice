@@ -12,7 +12,9 @@ class PlanController extends ApiController
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Plan::with(['planType', 'attributes', 'media']);
+        $query = Plan::with(['planType', 'attributes', 'media', 'deliveryMethods' => function ($q) {
+            $q->where('is_active', true);
+        }]);
 
         // Filter by active status (default to active only)
         if ($request->has('is_active')) {
@@ -69,7 +71,9 @@ class PlanController extends ApiController
 
     public function show(Plan $plan): JsonResponse
     {
-        $plan->load(['planType', 'attributes', 'media']);
+        $plan->load(['planType', 'attributes', 'media', 'deliveryMethods' => function ($q) {
+            $q->where('is_active', true);
+        }]);
 
         return $this->success(new PlanResource($plan));
     }

@@ -50,6 +50,25 @@ class Plan extends Model implements HasMedia
         return $this->belongsTo(DeliveryMethod::class);
     }
 
+    public function deliveryMethods()
+    {
+        return $this->belongsToMany(DeliveryMethod::class, 'plan_delivery_method')
+            ->withPivot('is_default', 'sort_order')
+            ->withTimestamps()
+            ->orderBy('sort_order');
+    }
+
+    public function getDefaultDeliveryMethodAttribute()
+    {
+        return $this->deliveryMethods()->wherePivot('is_default', true)->first()
+            ?? $this->deliveryMethods()->first();
+    }
+
+    public function hasDeliveryMethods(): bool
+    {
+        return $this->deliveryMethods()->exists();
+    }
+
     public function attributes()
     {
         return $this->belongsToMany(PlanAttribute::class, 'plan_plan_attribute')

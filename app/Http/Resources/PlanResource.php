@@ -27,10 +27,12 @@ class PlanResource extends JsonResource
             'plan_type' => new PlanTypeResource($this->whenLoaded('planType')),
             'media' => $this->whenLoaded('media', function () {
                 return $this->getMedia('images')->map(function ($media) {
+                    $url = $media->getUrl();
+
                     return [
                         'id' => $media->id,
-                        'url' => $media->getUrl(),
-                        'thumb_url' => $media->getUrl('thumb'),
+                        'url' => $url,
+                        'thumb_url' => $media->hasGeneratedConversion('thumb') ? $media->getUrl('thumb') : $url,
                         'name' => $media->name,
                         'size' => $media->size,
                         'mime_type' => $media->mime_type,
@@ -42,6 +44,7 @@ class PlanResource extends JsonResource
                 'available' => $this->available_stock,
             ]),
             'meta_data' => $this->meta_data,
+            'delivery_methods' => DeliveryMethodResource::collection($this->whenLoaded('deliveryMethods')),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

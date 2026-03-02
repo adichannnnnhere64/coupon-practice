@@ -28,20 +28,51 @@ class DeliveryService
 
     /**
      * Queue deliveries for the given inventory IDs
+     *
+     * @param  int|null  $deliveryMethodId  Optional specific delivery method to use
      */
-    public function queueDelivery(array $inventoryIds, User $user): int
+    public function queueDelivery(array $inventoryIds, User $user, ?int $deliveryMethodId = null): int
     {
-
-            \Log::info('start queue');
+        Log::info('Starting delivery queue');
         $queued = 0;
 
-        $inventories = PlanInventory::with(['plan.deliveryMethod'])
+        $inventories = PlanInventory::with(['plan.deliveryMethod', 'plan.deliveryMethods'])
             ->whereIn('id', $inventoryIds)
             ->where('status', PlanInventory::STATUS_SOLD)
             ->get();
 
+        // Get the specific delivery method if provided
+        $specificDeliveryMethod = $deliveryMethodId
+            ? DeliveryMethod::where('id', $deliveryMethodId)->where('is_active', true)->first()
+            : null;
+
         foreach ($inventories as $inventory) {
-            if (! $inventory->plan || ! $inventory->plan->deliveryMethod) {
+            // Determine which delivery method to use:
+            // 1. Specific delivery method from transaction (user selected)
+            // 2. Plan's default delivery method (legacy)
+            $deliveryMethod = $specificDeliveryMethod;
+
+            if (! $deliveryMethod && $inventory->plan) {
+                // Try many-to-many relationship first
+                $deliveryMethod = $inventory->plan->deliveryMethods()
+                    ->where('is_active', true)
+                    ->wherePivot('is_default', true)
+                    ->first();
+
+                // Fall back to first available delivery method
+                if (! $deliveryMethod) {
+                    $deliveryMethod = $inventory->plan->deliveryMethods()
+                        ->where('is_active', true)
+                        ->first();
+                }
+
+                // Fall back to legacy single delivery method
+                if (! $deliveryMethod) {
+                    $deliveryMethod = $inventory->plan->deliveryMethod;
+                }
+            }
+
+            if (! $deliveryMethod) {
                 Log::info('Skipping delivery - no delivery method configured', [
                     'inventory_id' => $inventory->id,
                 ]);
@@ -49,7 +80,6 @@ class DeliveryService
                 continue;
             }
 
-            $deliveryMethod = $inventory->plan->deliveryMethod;
             if (! $deliveryMethod->is_active) {
                 Log::info('Skipping delivery - delivery method inactive', [
                     'inventory_id' => $inventory->id,
@@ -59,6 +89,13 @@ class DeliveryService
                 continue;
             }
 
+            // Store the selected delivery method ID in inventory metadata
+            $inventory->update([
+                'meta_data' => array_merge($inventory->meta_data ?? [], [
+                    'delivery_method_id' => $deliveryMethod->id,
+                ]),
+            ]);
+
             // Manual delivery type doesn't get queued
             if ($deliveryMethod->type === DeliveryMethod::TYPE_MANUAL) {
                 $inventory->update(['delivery_status' => PlanInventory::DELIVERY_PENDING]);
@@ -67,7 +104,6 @@ class DeliveryService
             }
 
             $inventory->markDeliveryQueued();
-            \Log::info('oki');
 
             ProcessDeliveryJob::dispatch($inventory->id, $user->id)
                 ->onQueue('deliveries');
@@ -89,11 +125,22 @@ class DeliveryService
      */
     public function processDelivery(PlanInventory $inventory, User $user): DeliveryResult
     {
-        if (! $inventory->plan || ! $inventory->plan->deliveryMethod) {
-            return DeliveryResult::failure('No delivery method configured for this plan');
+        // Get delivery method from inventory metadata first (user-selected)
+        $deliveryMethodId = $inventory->meta_data['delivery_method_id'] ?? null;
+        $deliveryMethod = null;
+
+        if ($deliveryMethodId) {
+            $deliveryMethod = DeliveryMethod::find($deliveryMethodId);
         }
 
-        $deliveryMethod = $inventory->plan->deliveryMethod;
+        // Fall back to plan's delivery method
+        if (! $deliveryMethod && $inventory->plan) {
+            $deliveryMethod = $inventory->plan->deliveryMethod;
+        }
+
+        if (! $deliveryMethod) {
+            return DeliveryResult::failure('No delivery method configured for this plan');
+        }
 
         if (! $deliveryMethod->is_active) {
             return DeliveryResult::failure('Delivery method is inactive');

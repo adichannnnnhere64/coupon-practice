@@ -31,6 +31,11 @@ import {
   pricetagOutline,
   cardOutline,
   warning,
+  mailOutline,
+  chatbubbleOutline,
+  cloudUploadOutline,
+  codeSlashOutline,
+  personOutline,
 } from 'ionicons/icons';
 import { useQuery } from '@tanstack/react-query';
 import './CheckoutPage.scss';
@@ -43,6 +48,16 @@ import { PageHeader } from '@components/ui';
 import { usePaymentGatewaysQuery, queryKeys } from '@hooks/useQueries';
 import { useNotification } from '@services/useNotification';
 
+interface DeliveryMethod {
+  id: number;
+  name: string;
+  display_name: string;
+  type: string;
+  is_active: boolean;
+  is_default?: boolean;
+  sort_order?: number;
+}
+
 interface PlanType {
   id: number;
   plan_type_id: number;
@@ -53,6 +68,7 @@ interface PlanType {
   is_active: boolean;
   discount_percentage: number;
   meta_data: string;
+  delivery_methods?: DeliveryMethod[];
 }
 
 interface Operator {
@@ -111,6 +127,7 @@ const CheckoutPage: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [transactionId, setTransactionId] = useState<number | null>(null);
   const [operator, setOperator] = useState<Operator | null>(location.state?.operator || null);
+  const [selectedDeliveryMethodId, setSelectedDeliveryMethodId] = useState<number | null>(null);
 
   // Auth hooks
   const { user, refreshUser } = useAuth();
@@ -137,7 +154,12 @@ const CheckoutPage: React.FC = () => {
     is_active: planQuery.data.is_active,
     discount_percentage: planQuery.data.discount_percentage || 0,
     meta_data: '',
+    delivery_methods: planQuery.data.delivery_methods || [],
   } : location.state?.plan || null;
+
+  // Get available delivery methods
+  const deliveryMethods = plan?.delivery_methods || [];
+  const hasDeliveryMethods = deliveryMethods.length > 0;
 
   const loading = planQuery.isLoading;
 
@@ -167,6 +189,14 @@ const CheckoutPage: React.FC = () => {
       setSelectedGateway(stripeGateway ? 'stripe' : gateways[0].name);
     }
   }, [gateways, selectedGateway]);
+
+  // Set default delivery method when plan loads
+  useEffect(() => {
+    if (deliveryMethods.length > 0 && !selectedDeliveryMethodId) {
+      const defaultMethod = deliveryMethods.find(m => m.is_default) || deliveryMethods[0];
+      setSelectedDeliveryMethodId(defaultMethod.id);
+    }
+  }, [deliveryMethods, selectedDeliveryMethodId]);
 
   const userCredits = parseFloat(user?.wallet_balance || '0');
   const totalPrice = plan?.actual_price || 0;
@@ -212,6 +242,12 @@ const CheckoutPage: React.FC = () => {
       }
     }
 
+    // Validate delivery method selection if delivery methods are available
+    if (hasDeliveryMethods && !selectedDeliveryMethodId) {
+      setError('Please select a delivery method');
+      return;
+    }
+
     try {
       setIsProcessing(true);
       setError('');
@@ -222,6 +258,7 @@ const CheckoutPage: React.FC = () => {
         gateway: paymentMethod === 'credits' ? 'internal' : selectedGateway,
         currency: 'USD',
         description: `Purchase: ${plan?.name}`,
+        delivery_method_id: selectedDeliveryMethodId || undefined,
         metadata: {
           purchase_type: 'plan_purchase',
           plan_id: plan?.id,
@@ -673,6 +710,83 @@ const CheckoutPage: React.FC = () => {
           </IonCardContent>
         </IonCard>
 
+        {/* Delivery Method Selection */}
+        {hasDeliveryMethods && (
+          <IonCard className="delivery-card">
+            <IonCardHeader>
+              <IonCardTitle>Delivery Method</IonCardTitle>
+            </IonCardHeader>
+            <IonCardContent>
+              <IonRadioGroup
+                value={selectedDeliveryMethodId?.toString() || ''}
+                onIonChange={e => {
+                  setSelectedDeliveryMethodId(parseInt(e.detail.value));
+                  setError('');
+                }}
+              >
+                <IonList>
+                  {deliveryMethods.map((method) => {
+                    const getDeliveryIcon = (type: string) => {
+                      switch (type) {
+                        case 'email': return mailOutline;
+                        case 'sms': return chatbubbleOutline;
+                        case 'webhook': return cloudUploadOutline;
+                        case 'api': return codeSlashOutline;
+                        case 'manual': return personOutline;
+                        default: return mailOutline;
+                      }
+                    };
+
+                    const getDeliveryDescription = (type: string) => {
+                      switch (type) {
+                        case 'email': return 'Delivered to your email address';
+                        case 'sms': return 'Delivered via SMS to your phone';
+                        case 'webhook': return 'Delivered via webhook';
+                        case 'api': return 'Delivered via API';
+                        case 'manual': return 'Manual delivery by support';
+                        default: return 'Digital delivery';
+                      }
+                    };
+
+                    return (
+                      <IonItem
+                        key={method.id}
+                        lines="none"
+                        className={`delivery-method-item ${selectedDeliveryMethodId === method.id ? 'selected' : ''}`}
+                      >
+                        <IonIcon
+                          slot="start"
+                          icon={getDeliveryIcon(method.type)}
+                          color={selectedDeliveryMethodId === method.id ? 'primary' : 'dark'}
+                        />
+                        <IonLabel>
+                          <h2>{method.display_name}</h2>
+                          <p>{getDeliveryDescription(method.type)}</p>
+                        </IonLabel>
+                        <IonRadio
+                          slot="end"
+                          value={method.id.toString()}
+                        />
+                      </IonItem>
+                    );
+                  })}
+                </IonList>
+              </IonRadioGroup>
+
+              {!selectedDeliveryMethodId && (
+                <div className="delivery-method-warning ion-margin-top">
+                  <IonText color="warning">
+                    <small>
+                      <IonIcon icon={warning} size="small" />
+                      {' '}Please select a delivery method to continue
+                    </small>
+                  </IonText>
+                </div>
+              )}
+            </IonCardContent>
+          </IonCard>
+        )}
+
         {/* Payment Method */}
         <IonCard className="payment-card">
           <IonCardHeader>
@@ -896,7 +1010,8 @@ const CheckoutPage: React.FC = () => {
             disabled={
               isProcessing ||
               (paymentMethod === 'credits' && !hasEnoughCredits) ||
-              (paymentMethod === 'external' && (!selectedGateway || (selectedGateway === 'stripe' && !selectedPaymentMethodId)))
+              (paymentMethod === 'external' && (!selectedGateway || (selectedGateway === 'stripe' && !selectedPaymentMethodId))) ||
+              (hasDeliveryMethods && !selectedDeliveryMethodId)
             }
           >
             <IonIcon slot="start" icon={cash} />

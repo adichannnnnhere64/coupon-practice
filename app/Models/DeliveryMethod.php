@@ -65,11 +65,21 @@ class DeliveryMethod extends Model
     }
 
     /**
-     * Plans using this delivery method
+     * Plans using this delivery method (legacy one-to-one)
      */
     public function plans(): HasMany
     {
         return $this->hasMany(Plan::class);
+    }
+
+    /**
+     * Plans using this delivery method (many-to-many)
+     */
+    public function plansMany()
+    {
+        return $this->belongsToMany(Plan::class, 'plan_delivery_method')
+            ->withPivot('is_default', 'sort_order')
+            ->withTimestamps();
     }
 
     /**

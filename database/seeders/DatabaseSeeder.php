@@ -18,11 +18,11 @@ class DatabaseSeeder extends Seeder
         // User::factory(10)->create();
 
         $this->call([
-            PlanSeeder::class,
+            // PlanSeeder::class, // Basic seeder with minimal data
+            FullCatalogSeeder::class, // Full catalog with categories, plans, inventory and images
+            PaymentGatewaySeeder::class
         ]);
-        /* User::factory()->create([ */
-        /*     'name' => 'Test User', */
-        /*     'email' => 'test@example.com', */
-        /* ]); */
+
+
     }
 }

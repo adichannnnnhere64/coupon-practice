@@ -80,6 +80,17 @@ export interface PlanType {
   updated_at?: string;
 }
 
+// DeliveryMethod
+export interface DeliveryMethod {
+  id: number;
+  name: string;
+  display_name: string;
+  type: 'email' | 'sms' | 'webhook' | 'api' | 'manual';
+  is_active: boolean;
+  is_default?: boolean;
+  sort_order?: number;
+}
+
 // Plan
 export interface Plan {
   id: number;
@@ -96,6 +107,7 @@ export interface Plan {
   plan_type?: PlanType;
   media?: Media[];
   stock_summary?: StockSummary;
+  delivery_methods?: DeliveryMethod[];
   created_at?: string;
   updated_at?: string;
 }
