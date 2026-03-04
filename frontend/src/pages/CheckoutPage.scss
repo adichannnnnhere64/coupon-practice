@@ -26,12 +26,15 @@
   .summary-card,
   .details-card,
   .payment-card,
-  .security-card {
+  .security-card,
+  .delivery-card,
+  .review-card {
     margin: 16px;
     border-radius: 12px;
   }
 
-  .payment-method-item {
+  .payment-method-item,
+  .delivery-method-item {
     --border-radius: 8px;
     --padding-start: 16px;
     --padding-end: 16px;
@@ -114,5 +117,215 @@
     color: var(--ion-color-medium);
     font-size: 0.9em;
     margin-top: 8px;
+  }
+
+  // Stepper Styles
+  .checkout-stepper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    margin: 16px;
+    background: var(--ion-color-light);
+    border-radius: 12px;
+
+    .stepper-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s ease;
+
+      &.clickable {
+        cursor: pointer;
+
+        &:hover {
+          .step-icon-wrapper {
+            transform: scale(1.1);
+          }
+        }
+      }
+
+      .step-icon-wrapper {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        background: var(--ion-color-medium-tint);
+
+        .step-icon {
+          font-size: 24px;
+          color: var(--ion-color-medium);
+        }
+      }
+
+      .step-label {
+        font-size: 0.85em;
+        font-weight: 500;
+        color: var(--ion-color-medium);
+        text-align: center;
+      }
+
+      // Pending state
+      &.pending {
+        .step-icon-wrapper {
+          background: var(--ion-color-light-shade);
+        }
+
+        .step-icon {
+          color: var(--ion-color-medium);
+        }
+
+        .step-label {
+          color: var(--ion-color-medium);
+        }
+      }
+
+      // Active state
+      &.active {
+        .step-icon-wrapper {
+          background: var(--ion-color-primary);
+          box-shadow: 0 4px 12px rgba(var(--ion-color-primary-rgb), 0.3);
+        }
+
+        .step-icon {
+          color: var(--ion-color-primary-contrast);
+        }
+
+        .step-label {
+          color: var(--ion-color-primary);
+          font-weight: 600;
+        }
+      }
+
+      // Completed state
+      &.completed {
+        .step-icon-wrapper {
+          background: var(--ion-color-success);
+        }
+
+        .step-icon {
+          color: var(--ion-color-success-contrast);
+        }
+
+        .step-label {
+          color: var(--ion-color-success);
+        }
+      }
+    }
+
+    .stepper-connector {
+      flex: 1;
+      height: 3px;
+      margin: 0 8px;
+      margin-bottom: 24px; // Align with icon center
+      background: var(--ion-color-light-shade);
+      max-width: 60px;
+      border-radius: 2px;
+      transition: background-color 0.3s ease;
+
+      &.completed {
+        background: var(--ion-color-success);
+      }
+    }
+  }
+
+  // Step Content Styles
+  .checkout-step {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  // Step Actions (navigation buttons)
+  .step-actions {
+    margin-top: 16px;
+
+    .step-buttons {
+      display: flex;
+      gap: 12px;
+
+      ion-button {
+        flex: 1;
+      }
+    }
+
+    .terms-notice {
+      margin-top: 16px;
+      padding: 0 8px;
+    }
+  }
+
+  // Review Step Styles
+  .review-step {
+    .review-item {
+      --padding-start: 16px;
+      --padding-end: 16px;
+      margin-bottom: 8px;
+
+      h3 {
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+
+      p {
+        color: var(--ion-color-medium);
+      }
+
+      &.total-item {
+        border-top: 1px solid var(--ion-color-light);
+        padding-top: 16px;
+        margin-top: 8px;
+      }
+    }
+  }
+
+  // Mobile responsiveness
+  @media (max-width: 576px) {
+    .checkout-stepper {
+      padding: 16px 8px;
+
+      .stepper-step {
+        .step-icon-wrapper {
+          width: 40px;
+          height: 40px;
+
+          .step-icon {
+            font-size: 20px;
+          }
+        }
+
+        .step-label {
+          font-size: 0.75em;
+        }
+      }
+
+      .stepper-connector {
+        max-width: 40px;
+        margin-bottom: 20px;
+      }
+    }
+
+    .step-actions {
+      .step-buttons {
+        flex-direction: column;
+
+        ion-button {
+          width: 100%;
+        }
+      }
+    }
   }
 }
