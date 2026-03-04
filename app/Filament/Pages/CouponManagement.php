@@ -41,7 +41,7 @@ class CouponManagement extends Page implements HasForms, HasTable
 
     protected static ?string $title = 'Unified Coupon Manager';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 0;
 
     protected string $view = 'filament.pages.coupon-management';
 
