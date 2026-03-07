@@ -12,6 +12,7 @@ const UsersPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+  const [error, setError] = useState('');
 
   useEffect(() => {
     loadUsers();
@@ -20,6 +21,7 @@ const UsersPage: React.FC = () => {
   const loadUsers = async () => {
     try {
       setLoading(true);
+      setError('');
       const response: PaginatedResponse<AdminUser> = await adminApiClient.getUsers({
         page: currentPage,
         per_page: 15,
@@ -29,6 +31,9 @@ const UsersPage: React.FC = () => {
       setTotalPages(response.last_page);
     } catch (error) {
       console.error('Failed to load users:', error);
+      setUsers([]);
+      setTotalPages(1);
+      setError('Failed to load users. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -37,8 +42,12 @@ const UsersPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const payload = { ...formData };
+      if (!payload.password) {
+        delete payload?.password;
+      }
       if (editingUser) {
-        await adminApiClient.updateUser(editingUser.id, formData);
+        await adminApiClient.updateUser(editingUser.id, payload);
       } else {
         await adminApiClient.createUser(formData);
       }
@@ -98,6 +107,19 @@ const UsersPage: React.FC = () => {
         </div>
 
         <div style={{ background: 'white', padding: '18px', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+          {error && (
+            <div style={{
+              marginBottom: '12px',
+              padding: '10px 12px',
+              borderRadius: '8px',
+              background: '#ffebee',
+              color: '#c62828',
+              border: '1px solid #f44336',
+              fontSize: '13px'
+            }}>
+              {error}
+            </div>
+          )}
           <div style={{ marginBottom: '12px', display: 'flex', gap: '12px' }}>
             <div style={{ flex: 1, position: 'relative' }}>
               <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#999' }} />
@@ -188,6 +210,13 @@ const UsersPage: React.FC = () => {
                     </td>
                   </tr>
                 ))}
+                {!loading && users.length === 0 && (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: '#999' }}>
+                      No users found.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           )}

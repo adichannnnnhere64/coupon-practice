@@ -6,7 +6,9 @@ namespace App\Models;
 
 use Adichan\Wallet\Traits\HasWallet;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Adichan\Wallet\Models\Wallet;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -66,5 +68,13 @@ class User extends Authenticatable
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
+    }
+
+    /**
+     * Get user's wallet.
+     */
+    public function wallet(): MorphOne
+    {
+        return $this->morphOne(Wallet::class, 'owner');
     }
 }

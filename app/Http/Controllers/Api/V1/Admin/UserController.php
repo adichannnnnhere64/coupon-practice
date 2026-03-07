@@ -70,11 +70,13 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'email' => ['sometimes', 'email', Rule::unique('users', 'email')->ignore($user->id)],
-            'password' => 'sometimes|string|min:8',
+            'password' => 'nullable|string|min:8',
         ]);
 
-        if (isset($validated['password'])) {
+        if (! empty($validated['password'])) {
             $validated['password'] = Hash::make($validated['password']);
+        } else {
+            unset($validated['password']);
         }
 
         $user->update($validated);

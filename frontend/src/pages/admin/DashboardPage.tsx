@@ -6,6 +6,7 @@ import AdminLayout from './AdminLayout';
 const DashboardPage: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     loadStats();
@@ -13,10 +14,12 @@ const DashboardPage: React.FC = () => {
 
   const loadStats = async () => {
     try {
+      setError('');
       const response = await adminApiClient.getDashboardStats();
       setStats(response.data);
     } catch (error) {
       console.error('Failed to load stats:', error);
+      setError('Failed to load dashboard stats. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -43,6 +46,19 @@ const DashboardPage: React.FC = () => {
     <AdminLayout>
       <div>
         <h2 style={{ marginBottom: '30px', color: '#333' }}>Dashboard Overview</h2>
+        {error && (
+          <div style={{
+            marginBottom: '20px',
+            padding: '12px 16px',
+            borderRadius: '10px',
+            background: '#ffebee',
+            color: '#c62828',
+            border: '1px solid #f44336',
+            fontSize: '14px'
+          }}>
+            {error}
+          </div>
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '30px' }}>
           {statCards.map((stat, idx) => (
