@@ -236,4 +236,92 @@ ion-tab-button {
   }
 }
 
+// Allow native scrolling for non-Ionic admin pages.
+html.admin-scroll,
+body.admin-scroll {
+  height: auto;
+  overflow: auto;
+  color-scheme: light;
+  background: #f5f7fa;
+  color: #333;
+}
 
+body.admin-scroll {
+  position: static;
+}
+
+body.admin-scroll #root {
+  min-height: 100vh;
+}
+
+body.admin-scroll input,
+body.admin-scroll select,
+body.admin-scroll textarea {
+  background: #fff;
+  color: #333;
+}
+
+body.admin-scroll ::placeholder {
+  color: #9aa0a6;
+}
+
+// Admin tables and pagination (desktop-friendly compact sizing).
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.admin-table thead tr {
+  border-bottom: 1px solid #ececec;
+}
+
+.admin-table th {
+  text-align: left;
+  padding: 8px 10px;
+  color: #8c8c8c;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.admin-table td {
+  padding: 10px 10px;
+  font-size: 13px;
+  color: #333;
+}
+
+.admin-table tr {
+  border-bottom: 1px solid #f1f1f1;
+}
+
+.admin-table .admin-table-subtext {
+  font-size: 11px;
+  color: #999;
+}
+
+.admin-pagination {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 6px 0;
+  flex-wrap: wrap;
+}
+
+.admin-pagination button {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+@media (min-width: 992px) {
+  .admin-pagination {
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    border-top: 1px solid #f0f0f0;
+    box-shadow: 0 -6px 12px rgba(0, 0, 0, 0.04);
+    z-index: 1;
+  }
+}

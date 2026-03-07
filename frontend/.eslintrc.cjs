@@ -17,10 +17,11 @@ module.exports = {
   rules: {
     'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
     'no-debugger': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
-    'arrow-body-style': ['warn', 'as-needed'],
+    'arrow-body-style': 'off',
     'react/jsx-uses-vars': 'error',
     'react/react-in-jsx-scope': 'off',
     'react/self-closing-comp': ['error', { component: true, html: true }],
+    'react/prop-types': 'off',
     'react-hooks/exhaustive-deps': 'off',
     'react-refresh/only-export-components': 'warn',
     '@typescript-eslint/no-explicit-any': 'off',

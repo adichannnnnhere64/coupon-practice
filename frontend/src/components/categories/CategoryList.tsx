@@ -18,7 +18,7 @@ interface Category {
 }
 
 interface CategoryListProps {
-  categories: Category[];
+  categories?: Category[] | null;
   loading?: boolean;
   error?: Error | null;
   variant?: 'grid' | 'horizontal';
@@ -26,12 +26,14 @@ interface CategoryListProps {
 }
 
 const CategoryList: React.FC<CategoryListProps> = ({
-  categories,
+  categories = [],
   loading = false,
   error = null,
   variant = 'grid',
   onCategoryClick,
 }) => {
+  // Ensure categories is always an array
+  const safeCategories = categories || [];
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
   const scroll = (direction: 'left' | 'right') => {
@@ -58,7 +60,7 @@ const CategoryList: React.FC<CategoryListProps> = ({
     );
   }
 
-  if (categories.length === 0) {
+  if (safeCategories.length === 0) {
     return (
       <EmptyState
         icon={gridOutline}
@@ -79,7 +81,7 @@ const CategoryList: React.FC<CategoryListProps> = ({
           <IonIcon icon={chevronBack} />
         </button>
         <div className="category-list__scroll" ref={scrollRef}>
-          {categories.map((category) => (
+          {safeCategories.map((category) => (
             <div key={category.id} className="category-list__item">
               <CategoryCard
                 id={category.id}
@@ -114,7 +116,7 @@ const CategoryList: React.FC<CategoryListProps> = ({
           lg: "4"       // 4 columns on desktop
         }}
       >
-        {categories.map((category) => (
+        {safeCategories.map((category) => (
           <CategoryCard
             key={category.id}
             id={category.id}

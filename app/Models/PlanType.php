@@ -12,12 +12,23 @@ class PlanType extends Model implements HasMedia
 {
     use HasFactory, InteractsWithMedia, SoftDeletes;
 
-    protected $fillable = ['name', 'slug', 'description', 'is_active'];
+    protected $fillable = ['name', 'slug', 'description', 'is_active', 'category_id'];
 
     protected $casts = [
         'is_active' => 'boolean',
     ];
 
+    /**
+     * Get the category this plan type belongs to (singular)
+     */
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    /**
+     * Get all categories (many-to-many, legacy support)
+     */
     public function categories()
     {
         return $this->belongsToMany(Category::class)->withTimestamps();

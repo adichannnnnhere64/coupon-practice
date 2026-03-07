@@ -1,0 +1,11 @@
+export { default as AdminLayout } from './AdminLayout';
+export { default as AdminLoginPage } from './AdminLoginPage';
+export { default as DashboardPage } from './DashboardPage';
+export { default as UsersPage } from './UsersPage';
+export { default as CategoriesPage } from './CategoriesPage';
+export { default as PlanTypesPage } from './PlanTypesPage';
+export { default as PlansPage } from './PlansPage';
+export { default as CouponsPage } from './CouponsPage';
+export { default as ReportsPage } from './ReportsPage';
+export { default as PrintSettingsPage } from './PrintSettingsPage';
+export { default as SettingsPage } from './SettingsPage';

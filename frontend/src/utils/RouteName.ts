@@ -17,6 +17,18 @@ export const RouteName = {
   ORDER_DETAIL: '/orders/:orderId',
   CREDIT: '/credit',
   THANKYOU: '/thankyou',
+
+  // Admin routes
+  ADMIN: '/admin',
+  ADMIN_LOGIN: '/admin/login',
+  ADMIN_USERS: '/admin/users',
+  ADMIN_CATEGORIES: '/admin/categories',
+  ADMIN_PLAN_TYPES: '/admin/plan-types',
+  ADMIN_PLANS: '/admin/plans',
+  ADMIN_COUPONS: '/admin/coupons',
+  ADMIN_REPORTS: '/admin/reports',
+  ADMIN_PRINT_SETTINGS: '/admin/print-settings',
+  ADMIN_SETTINGS: '/admin/settings',
 };
 
 // Helper function to generate category URL

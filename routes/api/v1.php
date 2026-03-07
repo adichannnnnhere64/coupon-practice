@@ -172,3 +172,6 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
     Route::post('logout', [AuthController::class, 'logout'])->name('api.v1.logout');
     Route::get('me', [AuthController::class, 'me'])->name('api.v1.me');
 });
+
+// Admin routes (versioned under /api/v1/admin/*)
+require base_path('routes/api/admin.php');
