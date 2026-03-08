@@ -35,6 +35,14 @@ export interface CheckoutOperator {
   image: string;
 }
 
+// Purchase Result (for receipt)
+export interface PurchaseResult {
+  couponCode: string;
+  couponCodes?: string[];
+  transactionId: number | null;
+  deliveryMethodType: 'email' | 'sms' | 'webhook' | 'api' | 'manual' | null;
+}
+
 // Checkout State
 export interface CheckoutState {
   currentStep: CheckoutStep;
@@ -47,6 +55,8 @@ export interface CheckoutState {
   isProcessing: boolean;
   showConfirmation: boolean;
   showSuccess: boolean;
+  showReceiptModal: boolean;
+  purchaseResult: PurchaseResult | null;
 }
 
 // Step validation result
@@ -100,7 +110,9 @@ export interface CheckoutContextValue extends CheckoutState, CheckoutActions {
   // Alerts
   setShowConfirmation: (show: boolean) => void;
   setShowSuccess: (show: boolean) => void;
+  setShowReceiptModal: (show: boolean) => void;
   handleSuccessClose: () => void;
+  handleReceiptClose: () => void;
 }
 
 // Session storage key

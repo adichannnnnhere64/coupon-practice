@@ -8,6 +8,7 @@ use Adichan\Payment\Models\PaymentTransaction;
 use Adichan\Transaction\Models\Transaction;
 use Adichan\Wallet\Services\WalletService;
 use App\Http\Controllers\Controller;
+use App\Models\DeliveryMethod;
 use App\Models\Plan;
 use App\Models\PlanInventory;
 use App\Services\DeliveryService;
@@ -271,12 +272,21 @@ class PaymentController extends Controller
             // Sell inventory for plan purchases
             $metadata = $transaction->metadata ?? [];
             $inventorySold = 0;
+            $couponCodes = [];
+            $deliveryMethodType = null;
             if (($metadata['purchase_type'] ?? null) === 'plan_purchase') {
-                $soldIds = $this->sellReservedInventory($metadata, $user->id);
+                $soldResult = $this->sellReservedInventory($metadata, $user->id);
+                $soldIds = $soldResult['ids'];
+                $couponCodes = $soldResult['codes'];
                 $inventorySold = count($soldIds);
 
+                $deliveryMethodId = $metadata['delivery_method_id'] ?? null;
+                if ($deliveryMethodId) {
+                    $deliveryMethod = DeliveryMethod::find($deliveryMethodId);
+                    $deliveryMethodType = $deliveryMethod?->type;
+                }
+
                 if (! empty($soldIds)) {
-                    $deliveryMethodId = $metadata['delivery_method_id'] ?? null;
                     $this->deliveryService->queueDelivery($soldIds, $user, $deliveryMethodId);
                 }
             }
@@ -287,6 +297,9 @@ class PaymentController extends Controller
                 'payment_reference' => $paymentResponse->getGatewayReference(),
                 'requires_action' => false,
                 'inventory_sold' => $inventorySold,
+                'coupon_code' => $couponCodes[0] ?? null,
+                'coupon_codes' => $couponCodes,
+                'delivery_method_type' => $deliveryMethodType,
             ]);
 
         } catch (\Exception $e) {
@@ -355,6 +368,8 @@ class PaymentController extends Controller
             $transaction = $verification->getTransaction();
             $inventorySold = 0;
             $creditsAdded = null;
+            $couponCodes = [];
+            $deliveryMethodType = null;
 
             if ($transaction) {
                 $transaction->update(['status' => 'completed', 'completed_at' => now()]);
@@ -364,11 +379,18 @@ class PaymentController extends Controller
 
                 // Handle plan purchases - sell inventory
                 if (($metadata['purchase_type'] ?? null) === 'plan_purchase') {
-                    $soldIds = $this->sellReservedInventory($metadata, $user->id);
+                    $soldResult = $this->sellReservedInventory($metadata, $user->id);
+                    $soldIds = $soldResult['ids'];
+                    $couponCodes = $soldResult['codes'];
                     $inventorySold = count($soldIds);
 
+                    $deliveryMethodId = $metadata['delivery_method_id'] ?? null;
+                    if ($deliveryMethodId) {
+                        $deliveryMethod = DeliveryMethod::find($deliveryMethodId);
+                        $deliveryMethodType = $deliveryMethod?->type;
+                    }
+
                     if (! empty($soldIds)) {
-                        $deliveryMethodId = $metadata['delivery_method_id'] ?? null;
                         $this->deliveryService->queueDelivery($soldIds, $user, $deliveryMethodId);
                     }
                 }
@@ -386,6 +408,9 @@ class PaymentController extends Controller
                 'transaction_status' => $transaction?->status,
                 'inventory_sold' => $inventorySold,
                 'credits_added' => $creditsAdded,
+                'coupon_code' => $couponCodes[0] ?? null,
+                'coupon_codes' => $couponCodes,
+                'delivery_method_type' => $deliveryMethodType,
             ]);
 
         } catch (\Exception $e) {
@@ -416,6 +441,8 @@ class PaymentController extends Controller
 
             $metadata = $transaction->metadata ?? [];
             $inventorySold = 0;
+            $couponCodes = [];
+            $deliveryMethodType = null;
             $alreadyCompleted = $transaction->status === 'completed';
 
             if (! $alreadyCompleted) {
@@ -446,11 +473,18 @@ class PaymentController extends Controller
 
             // Always process inventory for plan purchases (even if transaction was already completed)
             if (($metadata['purchase_type'] ?? null) === 'plan_purchase') {
-                $soldIds = $this->sellReservedInventory($metadata, $user->id);
+                $soldResult = $this->sellReservedInventory($metadata, $user->id);
+                $soldIds = $soldResult['ids'];
+                $couponCodes = $soldResult['codes'];
                 $inventorySold = count($soldIds);
 
+                $deliveryMethodId = $metadata['delivery_method_id'] ?? null;
+                if ($deliveryMethodId) {
+                    $deliveryMethod = DeliveryMethod::find($deliveryMethodId);
+                    $deliveryMethodType = $deliveryMethod?->type;
+                }
+
                 if (! empty($soldIds)) {
-                    $deliveryMethodId = $metadata['delivery_method_id'] ?? null;
                     $this->deliveryService->queueDelivery($soldIds, $user, $deliveryMethodId);
                 }
             }
@@ -463,6 +497,9 @@ class PaymentController extends Controller
                 'verified_at' => $paymentRecord->verified_at?->toIso8601String() ?? now()->toIso8601String(),
                 'payment_reference' => $paymentRecord->gateway_transaction_id,
                 'inventory_sold' => $inventorySold,
+                'coupon_code' => $couponCodes[0] ?? null,
+                'coupon_codes' => $couponCodes,
+                'delivery_method_type' => $deliveryMethodType,
             ]);
 
         } catch (\Exception $e) {
@@ -476,7 +513,7 @@ class PaymentController extends Controller
     protected function sellReservedInventory(array $metadata, int $userId): array
     {
         if (empty($metadata['reserved_inventory_ids'])) {
-            return [];
+            return ['ids' => [], 'codes' => []];
         }
 
         $items = PlanInventory::whereIn('id', $metadata['reserved_inventory_ids'])
@@ -484,16 +521,18 @@ class PaymentController extends Controller
             ->get();
 
         $soldIds = [];
+        $soldCodes = [];
         foreach ($items as $item) {
             $item->markAsSold($userId);
             $soldIds[] = $item->id;
+            $soldCodes[] = $item->code;
         }
 
         if ($items->isNotEmpty() && $items->first()->plan) {
             $items->first()->plan->updateInventoryCounts();
         }
 
-        return $soldIds; // return array of IDs
+        return ['ids' => $soldIds, 'codes' => $soldCodes];
     }
 
     protected function addCreditsToWallet($transaction, $user, $gateway, string $paymentReference): ?float

@@ -132,6 +132,16 @@ export interface StockSummary {
   available: number;
 }
 
+// Print Settings
+export interface PrintSettings {
+  header_text: string;
+  footer_text: string;
+  include_qr: boolean;
+  include_logo: boolean;
+  font_size: string;
+  paper_size: string;
+}
+
 // Category
 export interface Category {
   id: number;
@@ -476,6 +486,18 @@ class ApiClient {
       ...params,
       search: query
     });
+  }
+
+  // ============================================================================
+  // SETTINGS ENDPOINTS
+  // ============================================================================
+
+  /**
+   * Get print settings (public)
+   */
+  async getPrintSettings(): Promise<PrintSettings> {
+    const response = await this.get<ApiResponse<PrintSettings>>('/settings/print');
+    return response.data;
   }
 }
 

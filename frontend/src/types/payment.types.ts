@@ -45,6 +45,10 @@ export interface PaymentResponse {
       type?: string;
     };
     payment_id?: string;
+    coupon_code?: string;
+    coupon_codes?: string[];
+    delivery_method_type?: 'email' | 'sms' | 'webhook' | 'api' | 'manual';
+    inventory_sold?: number;
   };
 }
 

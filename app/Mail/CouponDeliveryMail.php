@@ -9,6 +9,7 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 
 class CouponDeliveryMail extends Mailable
 {
@@ -44,6 +45,18 @@ class CouponDeliveryMail extends Mailable
      */
     public function content(): Content
     {
+        $printSettings = Cache::get('print_settings', [
+            'header_text' => 'CouponPay - Recharge Coupon',
+            'footer_text' => 'Thank you for your purchase!',
+            'include_qr' => true,
+            'include_logo' => true,
+            'font_size' => '12px',
+        ]);
+
+        $qrUrl = $printSettings['include_qr'] ?? true
+            ? route('qr.generate', ['code' => $this->inventory->code])
+            : null;
+
         return new Content(
             markdown: 'emails.coupon-delivery',
             with: [
@@ -51,8 +64,14 @@ class CouponDeliveryMail extends Mailable
                 'user' => $this->user,
                 'planName' => $this->inventory->plan?->name ?? 'Plan',
                 'code' => $this->inventory->code,
-                'viewUrl' => $this->inventory->coupon_view_url, // will be null if no media
+                'viewUrl' => $this->inventory->coupon_view_url,
                 'expiresAt' => $this->inventory->expires_at?->format('F j, Y'),
+                'headerText' => $printSettings['header_text'] ?? 'CouponPay - Recharge Coupon',
+                'footerText' => $printSettings['footer_text'] ?? 'Thank you for your purchase!',
+                'includeQr' => $printSettings['include_qr'] ?? true,
+                'includeLogo' => $printSettings['include_logo'] ?? true,
+                'fontSize' => $printSettings['font_size'] ?? '12px',
+                'qrUrl' => $qrUrl,
             ],
         );
     }

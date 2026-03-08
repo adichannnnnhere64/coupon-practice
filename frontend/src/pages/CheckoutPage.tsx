@@ -40,6 +40,7 @@ import {
   DeliveryMethodStep,
   ReviewStep,
 } from '@components/checkout';
+import { ReceiptModal } from '@components/receipt';
 
 // Inner component that uses checkout context
 const CheckoutContent: React.FC = () => {
@@ -52,9 +53,13 @@ const CheckoutContent: React.FC = () => {
     isProcessing,
     showConfirmation,
     showSuccess,
+    showReceiptModal,
+    purchaseResult,
+    transactionId,
     setShowConfirmation,
     handleConfirmPurchase,
     handleSuccessClose,
+    handleReceiptClose,
   } = useCheckout();
 
   // Render current step
@@ -248,6 +253,19 @@ const CheckoutContent: React.FC = () => {
         message="Processing your purchase..."
         duration={0}
       />
+
+      {/* Receipt Modal for Manual Delivery */}
+      {purchaseResult && (
+        <ReceiptModal
+          isOpen={showReceiptModal}
+          onClose={handleReceiptClose}
+          couponCode={purchaseResult.couponCode}
+          couponCodes={purchaseResult.couponCodes}
+          planName={plan?.name || ''}
+          amount={totalPrice}
+          transactionId={transactionId}
+        />
+      )}
     </>
   );
 };

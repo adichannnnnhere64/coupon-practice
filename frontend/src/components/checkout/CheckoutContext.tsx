@@ -16,6 +16,7 @@ import {
   StepValidation,
   CHECKOUT_STORAGE_KEY,
   PersistedCheckoutState,
+  PurchaseResult,
 } from '@models/checkout.types';
 import { TransactionResponse, PaymentResponse } from '@models/payment.types';
 
@@ -52,8 +53,10 @@ export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({ children }) 
   // UI state
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
+  const [purchaseResult, setPurchaseResult] = useState<PurchaseResult | null>(null);
 
   // Payment state
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>('credits');
@@ -316,7 +319,6 @@ export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({ children }) 
     }
 
     setIsProcessing(false);
-    setShowSuccess(true);
 
     // Clear persisted state
     sessionStorage.removeItem(CHECKOUT_STORAGE_KEY);
@@ -326,6 +328,28 @@ export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({ children }) 
     }
 
     sessionStorage.setItem('refresh_orders', 'true');
+
+    // Check if delivery method is manual - show receipt modal
+    const deliveryMethodType = response.data.delivery_method_type;
+    const rawCouponCodes = Array.isArray(response.data.coupon_codes) ? response.data.coupon_codes : [];
+    const normalizedCouponCodes = rawCouponCodes
+      .map((code) => (typeof code === 'string' ? code : (code as { code?: string })?.code))
+      .filter((code): code is string => typeof code === 'string' && code.trim().length > 0);
+    const couponCode = typeof response.data.coupon_code === 'string'
+      ? response.data.coupon_code.trim()
+      : (normalizedCouponCodes[0] ?? '');
+
+    if (deliveryMethodType === 'manual' && couponCode) {
+      setPurchaseResult({
+        couponCode,
+        couponCodes: normalizedCouponCodes.length ? normalizedCouponCodes : undefined,
+        transactionId,
+        deliveryMethodType,
+      });
+      setShowReceiptModal(true);
+    } else {
+      setShowSuccess(true);
+    }
   }, [paymentMethod, selectedGateway, transactionId, notif, refreshUser]);
 
   // Stripe payment handler
@@ -550,6 +574,27 @@ export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({ children }) 
     });
   }, [history, transactionId, totalPrice, plan?.name]);
 
+  // Receipt modal close handler
+  const handleReceiptClose = useCallback(() => {
+    setShowReceiptModal(false);
+    setPurchaseResult(null);
+    history.push(RouteName.ORDERS, {
+      purchase: {
+        transaction_id: transactionId,
+        amount: totalPrice,
+        product_name: plan?.name,
+        date: new Date().toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+      }
+    });
+  }, [history, transactionId, totalPrice, plan?.name]);
+
   // Context value
   const value = useMemo<CheckoutContextValue>(() => ({
     // Step state
@@ -558,8 +603,10 @@ export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({ children }) 
     // UI state
     showConfirmation,
     showSuccess,
+    showReceiptModal,
     isProcessing,
     error,
+    purchaseResult,
 
     // Payment state
     paymentMethod,
@@ -600,6 +647,7 @@ export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({ children }) 
     setIsProcessing,
     setShowConfirmation,
     setShowSuccess,
+    setShowReceiptModal,
 
     // Validation
     validateCurrentStep,
@@ -609,12 +657,15 @@ export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({ children }) 
     handleCheckout,
     handleConfirmPurchase,
     handleSuccessClose,
+    handleReceiptClose,
   }), [
     currentStep,
     showConfirmation,
     showSuccess,
+    showReceiptModal,
     isProcessing,
     error,
+    purchaseResult,
     paymentMethod,
     selectedGateway,
     selectedPaymentMethodId,
@@ -638,6 +689,7 @@ export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({ children }) 
     handleCheckout,
     handleConfirmPurchase,
     handleSuccessClose,
+    handleReceiptClose,
   ]);
 
   return (

@@ -1,0 +1,257 @@
+/* Receipt Modal Styles */
+.receipt-modal {
+  --width: 400px;
+  --max-width: 95vw;
+  --height: auto;
+  --max-height: 90vh;
+}
+
+.receipt-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 16px;
+}
+
+.receipt-container {
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 350px;
+  margin: 0 auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.receipt-header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.receipt-logo {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+
+.receipt-logo ion-icon {
+  font-size: 48px;
+}
+
+.receipt-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 8px 0;
+}
+
+.receipt-success {
+  color: #059669;
+  font-weight: 500;
+  margin: 0;
+}
+
+.receipt-divider {
+  border-top: 1px dashed #d1d5db;
+  margin: 16px 0;
+}
+
+.receipt-section {
+  margin-bottom: 16px;
+}
+
+.receipt-section h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 12px 0;
+}
+
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.receipt-label {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.receipt-value {
+  color: #1f2937;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.receipt-amount {
+  font-size: 16px;
+  font-weight: 600;
+  color: #059669;
+}
+
+.receipt-code-section {
+  text-align: center;
+}
+
+.receipt-code-box {
+  background: #dbeafe;
+  border: 2px solid #2563eb;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 8px;
+}
+
+.receipt-code {
+  font-family: 'Courier New', monospace;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1d4ed8;
+  letter-spacing: 0.1em;
+  word-break: break-all;
+}
+
+.receipt-code-missing {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0;
+}
+
+.receipt-qr-section {
+  text-align: center;
+  padding: 16px 0;
+}
+
+.receipt-qr-code {
+  width: 150px;
+  height: 150px;
+  margin: 0 auto;
+  display: block;
+}
+
+.receipt-qr-hint {
+  color: #6b7280;
+  font-size: 12px;
+  margin: 8px 0 0 0;
+}
+
+.receipt-footer {
+  text-align: center;
+  padding-top: 8px;
+}
+
+.receipt-footer p {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0;
+}
+
+.receipt-actions {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Print Styles */
+@media print {
+  /* Hide everything except the receipt */
+  body > *:not(ion-app),
+  ion-app > *:not(ion-modal),
+  ion-router-outlet,
+  ion-tab-bar,
+  ion-tabs,
+  ion-header.no-print,
+  .no-print {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Reset positioning for modal */
+  ion-modal.receipt-modal {
+    --width: 100% !important;
+    --height: auto !important;
+    --max-width: 100% !important;
+    --max-height: none !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    contain: none !important;
+  }
+
+  /* Make the receipt container printable */
+  .receipt-container {
+    visibility: visible !important;
+    position: relative !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+    padding: 20px !important;
+    background: #fff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .receipt-container * {
+    visibility: visible !important;
+  }
+
+  /* Ensure QR code prints correctly */
+  .receipt-qr-code {
+    visibility: visible !important;
+    display: block !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    max-width: 150px !important;
+    height: auto !important;
+  }
+
+  .receipt-actions {
+    display: none !important;
+  }
+
+  ion-content {
+    --background: #fff !important;
+    --overflow: visible !important;
+    contain: none !important;
+  }
+
+  ion-content::part(scroll) {
+    overflow: visible !important;
+    position: relative !important;
+  }
+
+  body,
+  html {
+    background: #fff !important;
+    overflow: visible !important;
+  }
+
+  @page {
+    margin: 10mm;
+    size: auto;
+  }
+}
+
+/* Thermal printer specific styles (80mm paper) */
+@media print and (max-width: 80mm) {
+  .receipt-container {
+    padding: 10px;
+    font-size: 10px;
+  }
+
+  .receipt-title {
+    font-size: 14px;
+  }
+
+  .receipt-code {
+    font-size: 16px;
+  }
+
+  .receipt-qr-code {
+    width: 100px;
+    height: 100px;
+  }
+}

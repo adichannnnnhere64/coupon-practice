@@ -11,7 +11,11 @@ const UsersPage: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
-  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+  const [formData, setFormData] = useState<{ name: string; email: string; password: string }>({
+    name: '',
+    email: '',
+    password: '',
+  });
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -42,9 +46,12 @@ const UsersPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const payload = { ...formData };
-      if (!payload.password) {
-        delete payload?.password;
+      const payload: Partial<{ name: string; email: string; password: string }> = {
+        name: formData.name,
+        email: formData.email,
+      };
+      if (formData.password) {
+        payload.password = formData.password;
       }
       if (editingUser) {
         await adminApiClient.updateUser(editingUser.id, payload);

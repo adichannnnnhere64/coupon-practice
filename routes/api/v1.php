@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PaymentGatewayController;
 use App\Http\Controllers\Api\V1\PlanController;
 use App\Http\Controllers\Api\V1\PlanTypeController;
+use App\Http\Controllers\Api\V1\SettingsController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -26,6 +27,9 @@ Route::middleware('throttle:auth')->group(function () {
 });
 
 Route::middleware('throttle:api')->group(function () {
+    // Public Settings
+    Route::get('settings/print', [SettingsController::class, 'printSettings'])->name('api.v1.settings.print');
+
     // Categories
     Route::get('categories', [CategoryController::class, 'index'])->name('api.v1.categories.index');
     Route::get('categories/{category}', [CategoryController::class, 'show'])->name('api.v1.categories.show');
@@ -146,7 +150,6 @@ Route::middleware('auth:sanctum')
 
         Route::get('/view/{inventory}', [CouponController::class, 'view'])
             ->name('view');
-
 
         Route::get('/code/{inventory}', [CouponController::class, 'code'])
             ->name('code');

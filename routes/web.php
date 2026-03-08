@@ -1,6 +1,8 @@
 <?php
 
 declare(strict_types=1);
+
+use App\Http\Controllers\QrCodeController;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 
@@ -37,6 +39,9 @@ Route::middleware('auth')
 
         return response()->download($media->getPath(), $media->file_name, ['Content-Type' => $media->mime_type]);
     })->name('coupons.download');
+
+// QR Code generation
+Route::get('/qr/{code}', [QrCodeController::class, 'generate'])->name('qr.generate');
 
 Route::get('/{path?}', function ($path = null) {
     $buildDir = public_path('build');
